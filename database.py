@@ -14,6 +14,7 @@ class DatabaseManager:
     """
     def __init__(self):
         self._client = None
+        self._indexed_dbs = set()
 
     def _get_client(self):
         """Inicializa e retorna o MongoClient (pool de conexões gerenciado internamente)"""
@@ -41,6 +42,37 @@ class DatabaseManager:
             return client[Config.ADMIN_DB_NAME]
         return None
 
+    def _ensure_tenant_indexes(self, tenant_db):
+        """Garante a criação de índices estruturais críticos para o Tenant DB apenas uma vez por instância."""
+        if tenant_db.name not in self._indexed_dbs:
+            try:
+                # Índices para o Livro Diário (Alta performance para Relatórios)
+                tenant_db.lancamentos_contabeis.create_index([("data", 1), ("status", 1)])
+                tenant_db.lancamentos_contabeis.create_index("partidas.conta_codigo")
+                tenant_db.lancamentos_contabeis.create_index("centro_custo")
+                tenant_db.lancamentos_contabeis.create_index("conta_debito")
+                tenant_db.lancamentos_contabeis.create_index("conta_credito")
+                
+                # Índices para o Contas a Pagar/Receber (Filtros de Dashboard)
+                tenant_db.contas_pagar.create_index([("data_vencimento", 1), ("status", 1)])
+                tenant_db.contas_pagar.create_index("participante_id")
+                tenant_db.contas_receber.create_index([("data_vencimento", 1), ("status", 1)])
+                tenant_db.contas_receber.create_index("participante_id")
+                
+                # Índices para Importações e Transações
+                tenant_db.transacoes.create_index([("data", 1), ("tipo", 1)])
+                tenant_db.transacoes.create_index("conta_codigo")
+                tenant_db.movimentos_ofx_pendentes.create_index("status")
+                
+                # Índices para Regras e Conciliação
+                tenant_db.contas_correntes.create_index([("cnpj", 1), ("apelido_conta", 1)], unique=True)
+                tenant_db.contas_correntes.create_index("id_origem_ofx", unique=True, sparse=True)
+                
+                self._indexed_dbs.add(tenant_db.name)
+                logging.info(f"Índices garantidos para o tenant: {tenant_db.name}")
+            except Exception as e:
+                logging.warning(f"Erro ao criar índices para {tenant_db.name}: {e}")
+
     def get_group_db(self, db_identifier):
         """
         Retorna a referência ao banco isolado de um Grupo Econômico específico.
@@ -57,7 +89,10 @@ class DatabaseManager:
                 db_name = f"db_grupo_{db_identifier.lower().replace(' ', '_')}"
             else:
                 db_name = db_identifier
-            return client[db_name]
+                
+            db = client[db_name]
+            self._ensure_tenant_indexes(db)
+            return db
         return None
 
 # Instância única global exportável

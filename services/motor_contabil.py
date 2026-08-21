@@ -12,6 +12,9 @@ class DesbalanceamentoContabilError(Exception):
 class ContaInvalidaError(Exception):
     pass
 
+class PeriodoFechadoError(Exception):
+    pass
+
 @dataclass
 class PartidaContabil:
     conta_codigo: str
@@ -66,6 +69,14 @@ class MotorContabil:
             if conta.get("classificacao") != "Analítica":
                 raise ContaInvalidaError(f"Não é permitido lançar em conta sintética: {p.conta_codigo} - {conta.get('nome')}")
             
+    def _validar_periodo_aberto(self, data: str):
+        if not data or len(data) < 7:
+            return
+        ano_mes = data[:7]
+        periodo = self.db.periodos_fechados.find_one({"ano_mes": ano_mes})
+        if periodo and periodo.get("fechado", False):
+            raise PeriodoFechadoError(f"Não é possível lançar em um período contábil já fechado ({ano_mes}).")
+
     def registrar_lancamento(self, data: str, historico: str, partidas: List[PartidaContabil], 
                              documento_id: Optional[str] = None, origem: str = "Manual", 
                              centro_custo: str = "Geral", usuario_id: Optional[str] = None) -> str:
@@ -73,6 +84,7 @@ class MotorContabil:
         Registra um lançamento contábil no MongoDB após rigorosa validação.
         Suporta partidas 1:1, 1:N, N:1 e N:N.
         """
+        self._validar_periodo_aberto(data)
         self._validar_balanceamento(partidas)
         self._validar_contas_analiticas(partidas)
         
@@ -123,6 +135,7 @@ class MotorContabil:
             self._validar_contas_analiticas(todas_partidas)
             
         for item in lote_dados:
+            self._validar_periodo_aberto(item.get("data", ""))
             partidas = item.get("partidas", [])
             self._validar_balanceamento(partidas)
             
@@ -167,6 +180,8 @@ class MotorContabil:
             
         if lancamento_original.get("status") == "Estornado":
             raise ValueError("Este lançamento já foi estornado.")
+            
+        self._validar_periodo_aberto(lancamento_original.get("data", ""))
             
         # Marca o original como estornado
         self.db.lancamentos_contabeis.update_one(

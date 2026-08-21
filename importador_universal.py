@@ -61,11 +61,13 @@ class ImportadorUniversal:
             dtposted_match = re.search(r"<DTPOSTED>([^<\r\n\t]+)", block)
             trnamt_match = re.search(r"<TRNAMT>([^<\r\n\t]+)", block)
             memo_match = re.search(r"<MEMO>([^<\r\n\t]+)", block)
+            fitid_match = re.search(r"<FITID>([^<\r\n\t]+)", block)
             
             if trnamt_match and memo_match:
                 dtposted_raw = dtposted_match.group(1).strip() if dtposted_match else ""
                 trnamt = float(trnamt_match.group(1).strip())
                 memo = memo_match.group(1).strip()
+                fitid = fitid_match.group(1).strip() if fitid_match else None
                 
                 date_str = datetime.today().strftime("%Y-%m-%d")
                 if len(dtposted_raw) >= 8:
@@ -77,11 +79,13 @@ class ImportadorUniversal:
                     except Exception:
                         pass
                 
+                hash_calculado = cls.gerar_hash(date_str, trnamt, memo)
                 transacoes.append({
                     "data": date_str,
                     "descricao": memo,
                     "valor": trnamt,
-                    "hash": cls.gerar_hash(date_str, trnamt, memo)
+                    "fitid": fitid,
+                    "hash": fitid if fitid else hash_calculado
                 })
         return transacoes, metadados
 

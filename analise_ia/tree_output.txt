@@ -1,0 +1,52 @@
+.
+├── analise_ia
+│   └── tree_output.txt
+├── app.py
+├── config.py
+├── database.py
+├── importador_lancamentos.py
+├── importador_plano_contas.py
+├── importador_universal.py
+├── requirements.txt
+├── seed.py
+├── services
+│   ├── bancos_service.py
+│   ├── motor_contabil.py
+│   └── relatorios_contabeis.py
+├── static
+│   ├── css
+│   │   └── style.css
+│   └── js
+│       └── inactivity.js
+└── templates
+    ├── admin_dashboard.html
+    ├── balanco.html
+    ├── base.html
+    ├── bpo_central.html
+    ├── cadastro_grupo.html
+    ├── centros_custo.html
+    ├── classificar_movimentos.html
+    ├── config_regex.html
+    ├── contas_correntes.html
+    ├── contas_pagar.html
+    ├── contas_receber.html
+    ├── dashboard.html
+    ├── dfc.html
+    ├── dre_anual.html
+    ├── dre.html
+    ├── filiais.html
+    ├── gestao_master.html
+    ├── importar_ofx.html
+    ├── importar_universal.html
+    ├── integridade.html
+    ├── lancamentos.html
+    ├── login.html
+    ├── participantes.html
+    ├── plano_contas.html
+    ├── razao.html
+    ├── razonetes.html
+    ├── recuperar_senha.html
+    ├── resetar_senha.html
+    └── usuarios.html
+
+7 directories, 43 files

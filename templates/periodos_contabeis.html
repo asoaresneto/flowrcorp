@@ -1,0 +1,150 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="bi bi-lock-fill me-2"></i>Fechamento Contábil</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalFecharPeriodo">
+            <i class="bi bi-calendar-x"></i> Fechar Novo Período
+        </button>
+    </div>
+
+    <!-- Tabela de Períodos Fechados -->
+    <div class="card bg-dark text-white mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Períodos Encerrados</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Competência</th>
+                        <th>Fechado em</th>
+                        <th>Fechado por</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in periodos %}
+                    <tr>
+                        <td><strong>{{ p.ano_mes }}</strong></td>
+                        <td>{{ p.fechado_em | formata_data }}</td>
+                        <td>{{ p.fechado_por }}</td>
+                        <td>
+                            {% if p.fechado %}
+                                <span class="badge bg-danger">FECHADO</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">REABERTO</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.fechado %}
+                            <button class="btn btn-sm btn-outline-warning" 
+                                    onclick="abrirModalReabrir('{{ p.ano_mes }}')">
+                                Reabrir
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">Nenhum período contábil fechado até o momento.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tabela de Log de Auditoria -->
+    <div class="card bg-dark text-white">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Log de Auditoria de Reaberturas</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-dark table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Data Evento</th>
+                        <th>Competência</th>
+                        <th>Usuário</th>
+                        <th>Justificativa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in auditoria %}
+                    <tr>
+                        <td>{{ log.data_evento | formata_data }}</td>
+                        <td>{{ log.ano_mes }}</td>
+                        <td>{{ log.usuario }}</td>
+                        <td>{{ log.justificativa }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">Nenhum evento de reabertura registrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Fechar Período -->
+<div class="modal fade" id="modalFecharPeriodo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <form action="{{ url_for('fechar_periodo') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Fechar Período Contábil</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">Atenção! Ao fechar um período, novos lançamentos, edições e estornos serão bloqueados.</p>
+                    <div class="mb-3">
+                        <label>Mês de Competência</label>
+                        <input type="month" name="ano_mes" class="form-control bg-secondary text-white border-secondary" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Fechamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reabrir Período -->
+<div class="modal fade" id="modalReabrirPeriodo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <form action="{{ url_for('reabrir_periodo') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reabrir Período Contábil</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-warning">Esta ação é crítica e será registrada em auditoria.</p>
+                    <input type="hidden" name="ano_mes" id="reabrir_ano_mes">
+                    <div class="mb-3">
+                        <label>Justificativa Obrigatória</label>
+                        <textarea name="justificativa" class="form-control bg-secondary text-white border-secondary" rows="3" required placeholder="Ex: Correção de notas fiscais atrasadas a pedido da contabilidade..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Confirmar Reabertura</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalReabrir(anoMes) {
+    document.getElementById('reabrir_ano_mes').value = anoMes;
+    new bootstrap.Modal(document.getElementById('modalReabrirPeriodo')).show();
+}
+</script>
+{% endblock %}

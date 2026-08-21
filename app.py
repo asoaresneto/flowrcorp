@@ -5,13 +5,15 @@ from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import bcrypt
 from bson.objectid import ObjectId
+from bson.decimal128 import Decimal128
+from decimal import Decimal
 
 from config import Config
 from database import db_manager
 from importador_plano_contas import ImportadorPlanoContas
 from importador_lancamentos import ImportadorLancamentos
 from importador_universal import ImportadorUniversal
-from services.motor_contabil import MotorContabil, PartidaContabil, DesbalanceamentoContabilError, ContaInvalidaError
+from services.motor_contabil import MotorContabil, PartidaContabil, DesbalanceamentoContabilError, ContaInvalidaError, PeriodoFechadoError
 from services.relatorios_contabeis import RelatoriosContabeis
 from services.bancos_service import BancosService
 
@@ -1703,8 +1705,9 @@ def contas_pagar_salvar():
     
     if tenant_db is not None:
         try:
-            # Converte valor para float puro
-            valor = float(valor_str.replace(".", "").replace(",", "."))
+            # Converte valor para Decimal
+            valor_limpo = valor_str.replace(".", "").replace(",", ".")
+            valor = Decimal128(Decimal(valor_limpo).quantize(Decimal("0.01")))
             
             # Resolve os nomes dos objetos vinculados para cachear no documento do lançamento (evita joins lentos)
             fornecedor = tenant_db.participantes.find_one({"_id": ObjectId(participante_id)})
@@ -1865,8 +1868,9 @@ def contas_receber_salvar():
     
     if tenant_db is not None:
         try:
-            # Converte valor para float puro
-            valor = float(valor_str.replace(".", "").replace(",", "."))
+            # Converte valor para Decimal
+            valor_limpo = valor_str.replace(".", "").replace(",", ".")
+            valor = Decimal128(Decimal(valor_limpo).quantize(Decimal("0.01")))
             
             # Resolve os nomes dos objetos vinculados
             cliente = tenant_db.participantes.find_one({"_id": ObjectId(participante_id)})
@@ -3646,7 +3650,7 @@ def real_filter(val):
     if val is None:
         return "R$ 0,00"
     try:
-        val = float(val)
+        val = float(str(val))
     except (ValueError, TypeError):
         return "R$ 0,00"
     
@@ -4545,6 +4549,54 @@ def reprocessar_pendentes():
         logging.error(f"Erro no reprocessamento: {e}")
         return jsonify({"sucesso": False, "mensagem": str(e)})
 
+
+
+# NOVAS ROTAS (No final do app.py)
+@app.route("/contabil/periodos", methods=["GET"])
+@master_admin_required
+def periodos_contabeis():
+    tenant_db = db_manager.get_group_db(session.get("grupo_slug"))
+    periodos = list(tenant_db.periodos_fechados.find().sort("ano_mes", -1))
+    auditoria = list(tenant_db.log_auditoria_periodos.find().sort("data_evento", -1).limit(50))
+    return render_template("periodos_contabeis.html", periodos=periodos, auditoria=auditoria)
+
+@app.route("/contabil/periodos/fechar", methods=["POST"])
+@master_admin_required
+def fechar_periodo():
+    ano_mes = request.form.get("ano_mes", "").strip()
+    tenant_db = db_manager.get_group_db(session.get("grupo_slug"))
+    tenant_db.periodos_fechados.update_one(
+        {"ano_mes": ano_mes},
+        {"$set": {
+            "fechado": True, 
+            "fechado_em": datetime.now(timezone.utc).isoformat(), 
+            "fechado_por": session.get("user_email")
+        }},
+        upsert=True
+    )
+    flash(f"Período {ano_mes} fechado.", "success")
+    return redirect(url_for("periodos_contabeis"))
+
+@app.route("/contabil/periodos/reabrir", methods=["POST"])
+@master_admin_required
+def reabrir_periodo():
+    ano_mes = request.form.get("ano_mes", "").strip()
+    justificativa = request.form.get("justificativa", "").strip()
+    tenant_db = db_manager.get_group_db(session.get("grupo_slug"))
+    
+    tenant_db.periodos_fechados.update_one(
+        {"ano_mes": ano_mes},
+        {"$set": {"fechado": False}}
+    )
+    tenant_db.log_auditoria_periodos.insert_one({
+        "ano_mes": ano_mes,
+        "acao": "REABERTURA",
+        "justificativa": justificativa,
+        "usuario": session.get("user_email"),
+        "data_evento": datetime.now(timezone.utc).isoformat()
+    })
+    flash(f"Período {ano_mes} REABERTO. Ação registrada em log.", "warning")
+    return redirect(url_for("periodos_contabeis"))
 
 if __name__ == "__main__":
     # Roda localmente na porta configurada

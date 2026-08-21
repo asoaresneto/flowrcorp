@@ -1,0 +1,140 @@
+@app.route("/")
+def index():
+@app.route("/cadastrar-grupo", methods=["GET", "POST"], strict_slashes=False)
+def cadastrar_grupo():
+@app.route("/login", methods=["GET", "POST"])
+def login():
+@app.route("/recuperar-senha", methods=["GET", "POST"])
+def recuperar_senha():
+@app.route("/resetar-senha", methods=["GET", "POST"])
+def resetar_senha():
+@app.route("/dashboard")
+@login_required
+@app.route("/logout")
+def logout():
+@app.route("/plano-contas")
+@login_required
+@app.route("/plano-contas/salvar", methods=["POST"])
+@login_required
+@app.route("/api/plano-contas/buscar/<codigo>")
+@login_required
+@app.route("/plano-contas/atualizar", methods=["POST"])
+@login_required
+@app.route("/plano-contas/importar-padrao", methods=["POST"])
+@login_required
+@app.route("/plano-contas/importar-csv", methods=["POST"])
+@login_required
+@app.route("/lancamentos/importar-csv", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/participantes")
+@login_required
+@app.route("/participantes/salvar", methods=["POST"])
+@login_required
+@app.route("/api/participantes/buscar/<id>")
+@login_required
+@app.route("/participantes/atualizar", methods=["POST"])
+@login_required
+@app.route("/usuarios")
+@login_required
+@app.route("/usuarios/salvar", methods=["POST"])
+@login_required
+@app.route("/api/bancos", methods=["GET"], strict_slashes=False)
+@login_required
+@app.route("/config/bancos/importar-csv", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/config/bancos/sincronizar", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/api/participantes/rapido", methods=["POST"])
+@login_required
+@app.route("/contas-pagar")
+@login_required
+@app.route("/contas-pagar/salvar", methods=["POST"])
+@login_required
+@app.route("/contas-pagar/liquidar", methods=["POST"])
+@login_required
+@app.route("/contas-receber")
+@login_required
+@app.route("/contas-receber/salvar", methods=["POST"])
+@login_required
+@app.route("/contas-receber/liquidar", methods=["POST"])
+@login_required
+@app.route("/financeiro/atualizar/<tipo_fluxo>/<id_titulo>", methods=["POST"])
+@login_required
+@app.route("/contabilidade/lancamento/atualizar/<id_lancamento>", methods=["POST"])
+@login_required
+@app.route("/config/filiais", methods=["GET", "POST"], strict_slashes=False)
+@login_required
+@app.route("/config/centros-custo", methods=["GET", "POST"], strict_slashes=False)
+@login_required
+@app.route("/config/contas-correntes", methods=["GET", "POST"], strict_slashes=False)
+@login_required
+@app.route("/config/contas-correntes/atualizar", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/config/regex")
+@login_required
+@app.route("/config/regex/salvar", methods=["POST"])
+@login_required
+@app.route("/importar-ofx")
+@login_required
+@app.route("/importar-ofx/upload", methods=["POST"])
+@login_required
+@app.route("/classificar-movimentos")
+@login_required
+@app.route("/movimentos/conciliar", methods=["POST"])
+@login_required
+@app.route("/financeiro/dre")
+@login_required
+@app.route("/financeiro/balanco")
+@login_required
+@app.route("/financeiro/dre-anual")
+@login_required
+@app.route("/financeiro/dfc")
+@login_required
+@app.route("/contabil/lancamentos")
+@login_required
+@app.route("/contabil/razao")
+@login_required
+@app.route("/contabil/razonetes")
+@login_required
+@app.route("/importacoes/integridade")
+@login_required
+@app.route("/admin/dashboard", strict_slashes=False)
+@app.route("/admin/dashboard/", strict_slashes=False)
+@app.route("/admin-master", strict_slashes=False)
+@app.route("/admin-master/", strict_slashes=False)
+@app.route("/gestao-master", strict_slashes=False)
+@app.route("/gestao-master/", strict_slashes=False)
+@login_required
+@app.route("/admin/grupo/atualizar", methods=["POST"], strict_slashes=False)
+@app.route("/admin/grupo/atualizar/", methods=["POST"], strict_slashes=False)
+@app.route("/admin/grupo/atualizar-completo", methods=["POST"], strict_slashes=False)
+@app.route("/admin/grupo/atualizar-completo/", methods=["POST"], strict_slashes=False)
+@app.route("/gestao-master/grupo/atualizar", methods=["POST"], strict_slashes=False)
+@app.route("/gestao-master/grupo/atualizar/", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/gestao-master-deprecated", methods=["GET", "POST"], strict_slashes=False)
+@login_required
+@app.route("/gestao-master/grupo/atualizar-deprecated", methods=["POST"], strict_slashes=False)
+@app.route("/gestao-master/grupo/atualizar-deprecated/", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/admin/bpo-central", strict_slashes=False)
+@app.route("/admin/bpo-central/", strict_slashes=False)
+@login_required
+@app.route("/admin/bpo/operar/<grupo_slug>", methods=["GET", "POST"], strict_slashes=False)
+@app.route("/admin/bpo/operar/<grupo_slug>/", methods=["GET", "POST"], strict_slashes=False)
+@login_required
+@app.route("/admin/bpo/sair", strict_slashes=False)
+@app.route("/admin/bpo/sair/", strict_slashes=False)
+@login_required
+@app.route("/importacao-universal", methods=["GET"], strict_slashes=False)
+@login_required
+@app.route("/importacao-universal/preview", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/importacao-universal/commit", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/api/importacao/pendencias", methods=["GET"])
+@login_required
+@app.route("/api/lancamentos-pendentes/reprocessar", methods=["POST"], strict_slashes=False)
+@login_required
+@app.route("/api/lancamentos-pendentes/reprocessar", methods=["POST"], strict_slashes=False)
+@login_required
