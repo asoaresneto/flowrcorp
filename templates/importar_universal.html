@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .csv-dropzone-lc {
+        border: 2px dashed rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        padding: 3rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(0, 0, 0, 0.2);
+    }
+    .csv-dropzone-lc:hover,
+    .csv-dropzone-lc.drag-over {
+        border-color: var(--primary);
+        background: rgba(37, 99, 235, 0.06);
+    }
+    .csv-dropzone-lc .drop-icon {
+        font-size: 3rem;
+        color: var(--primary);
+        margin-bottom: 0.75rem;
+        transition: transform 0.3s ease;
+    }
+    .csv-dropzone-lc:hover .drop-icon {
+        transform: translateY(-5px);
+    }
+    .row-duplicada {
+        background-color: rgba(239, 68, 68, 0.1) !important;
+        border-left: 4px solid var(--danger);
+    }
+    .row-ok {
+        border-left: 4px solid var(--success);
+    }
+    .lc-spinner { display: none; text-align: center; padding: 3rem 0; }
+    .lc-spinner.active { display: block; }
+</style>
+
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-cloud-arrow-up-fill text-primary fs-4"></i>
+            <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Importação Financeira (OFX, CSV, Excel)</h2>
+        </div>
+    </div>
+
+    <div class="card dv-card p-4" id="fase-upload">
+        <div class="border-bottom border-secondary pb-2 mb-4">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Upload e Validação</h5>
+            <p class="text-muted small mb-0">Selecione a conta bancária e faça o upload do extrato ou planilha.</p>
+        </div>
+
+        <form id="form-upload" onsubmit="event.preventDefault(); processarPreview();">
+            <div class="form-group mb-4">
+                <label for="conta_corrente_id" class="form-label small fw-bold text-muted">Conta Corrente de Origem (Opcional p/ OFX)</label>
+                <select id="conta_corrente_id" name="conta_corrente_id" class="form-select text-white" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255, 255, 255, 0.15);">
+                    <option value="" style="background-color: var(--bg-card); color: #888;">Detectar automaticamente ou Selecione a conta...</option>
+                    {% for c in contas_correntes %}
+                    <option value="{{ c._id }}" style="background-color: var(--bg-card); color: var(--text-main);">{{ c.banco }} (Ag: {{ c.agencia }} C/C: {{ c.conta_numero }}-{{ c.conta_dv }})</option>
+                    {% endfor %}
+                </select>
+                <span class="text-muted d-block mt-1" style="font-size: 0.75rem;">Para arquivos OFX, se houver ID Origem cadastrado, não é necessário selecionar a conta.</span>
+            </div>
+
+            <label for="file_upload" class="csv-dropzone-lc d-block mb-4" id="dropzone-area">
+                <i class="bi bi-file-earmark-spreadsheet-fill drop-icon d-block"></i>
+                <span class="d-block text-white fw-bold h5 mb-2">Arraste o arquivo OFX, CSV ou Excel</span>
+                <span class="d-block text-muted">Extensões suportadas: .ofx, .csv, .xlsx, .xls</span>
+                <span id="file-name" class="d-block mt-3 text-success fw-bold" style="display: none; font-size: 1rem;"></span>
+                <input type="file" id="file_upload" name="file" class="d-none" accept=".ofx,.csv,.xlsx,.xls" required>
+            </label>
+
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary px-4 py-2" id="btn-preview" style="border-radius: 10px; font-weight: 600;" disabled>
+                    Avançar para Revisão <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Spinner -->
+    <div id="processing-phase" class="lc-spinner card dv-card">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Processando...</span>
+        </div>
+        <h5 class="text-white mt-3 fw-bold">Analisando Arquivo...</h5>
+        <p class="text-muted mb-0">Identificando colunas e verificando duplicidades no banco de dados.</p>
+    </div>
+
+    <!-- Fase 2: Tabela de Revisão -->
+    <div class="card dv-card p-4" id="fase-revisao" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-4">
+            <div>
+                <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Revisão de Lançamentos</h5>
+                <p class="text-muted small mb-0">Desmarque as duplicidades e categorize os lançamentos antes de salvar.</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelarRevisao()" style="border-radius: 10px;">Cancelar</button>
+                <button type="button" class="btn btn-success px-4" onclick="confirmarImportacao()" style="border-radius: 10px; font-weight: 600;">
+                    <i class="bi bi-check-circle-fill me-2"></i> Importar Selecionados
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover align-middle m-0 text-white" id="tabela-revisao" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead style="position: sticky; top: 0; background-color: var(--bg-card); z-index: 1;">
+                    <tr class="text-muted small">
+                        <th style="width: 50px;" class="text-center">
+                            <input class="form-check-input" type="checkbox" id="check-all" onchange="toggleAll(this)">
+                        </th>
+                        <th style="width: 120px;">Data</th>
+                        <th>Descrição / Histórico</th>
+                        <th class="text-end" style="width: 150px;">Valor</th>
+                        <th style="width: 300px;">Categoria (Plano de Contas)</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-revisao">
+                    <!-- Linhas injetadas via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Select Oculto de Categorias (usado como template) -->
+<div class="d-none" id="template-categoria">
+    <select class="form-select form-select-sm text-white cat-select" style="background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.15);">
+        <option value="">(Automático / Não Categorizado)</option>
+        {% for c in contas_resultado %}
+        <option value="{{ c.codigo }}">{{ c.codigo }} - {{ c.nome }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file_upload');
+    const dropzone = document.getElementById('dropzone-area');
+    const fileNameDisplay = document.getElementById('file-name');
+    const btnPreview = document.getElementById('btn-preview');
+    let transacoesParaImportar = [];
+
+    // Drag and Drop
+    dropzone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', function(e) { e.preventDefault(); this.classList.remove('drag-over'); });
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault(); this.classList.remove('drag-over');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            atualizarArquivo();
+        }
+    });
+
+    fileInput.addEventListener('change', atualizarArquivo);
+
+    function atualizarArquivo() {
+        if (fileInput.files && fileInput.files.length > 0) {
+            fileNameDisplay.textContent = '📄 ' + fileInput.files[0].name;
+            fileNameDisplay.style.display = 'block';
+            btnPreview.disabled = false;
+        } else {
+            fileNameDisplay.style.display = 'none';
+            btnPreview.disabled = true;
+        }
+    }
+
+    function processarPreview() {
+        if (!fileInput.files[0]) return;
+
+        const formData = new FormData(document.getElementById('form-upload'));
+
+        document.getElementById('fase-upload').style.display = 'none';
+        document.getElementById('processing-phase').classList.add('active');
+
+        fetch("{{ url_for('importacao_universal_preview') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('processing-phase').classList.remove('active');
+            if (data.sucesso) {
+                if (data.conta_corrente_id) {
+                    document.getElementById('conta_corrente_id').value = data.conta_corrente_id;
+                }
+                renderizarTabela(data.transacoes);
+                document.getElementById('fase-revisao').style.display = 'block';
+            } else {
+                alert("Erro: " + data.mensagem);
+                document.getElementById('fase-upload').style.display = 'block';
+            }
+        })
+        .catch(err => {
+            alert("Falha na comunicação: " + err);
+            document.getElementById('processing-phase').classList.remove('active');
+            document.getElementById('fase-upload').style.display = 'block';
+        });
+    }
+
+    function renderizarTabela(transacoes) {
+        const tbody = document.getElementById('tbody-revisao');
+        tbody.innerHTML = '';
+        transacoesParaImportar = transacoes;
+        
+        const templateSelect = document.getElementById('template-categoria').innerHTML;
+
+        transacoes.forEach((t, index) => {
+            const tr = document.createElement('tr');
+            tr.className = t.status_duplicado ? 'row-duplicada text-muted' : 'row-ok';
+            
+            const isChecked = !t.status_duplicado ? 'checked' : '';
+            const valorFormatado = t.valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+            const badgeDuplicado = t.status_duplicado ? '<span class="badge bg-danger ms-2">Duplicado</span>' : '';
+            
+            let colorValor = 'text-white';
+            if (t.valor > 0) colorValor = 'text-success';
+            if (t.valor < 0) colorValor = 'text-danger';
+
+            tr.innerHTML = `
+                <td class="text-center">
+                    <input class="form-check-input row-checkbox" type="checkbox" data-index="${index}" ${isChecked}>
+                </td>
+                <td style="font-family: monospace;">${t.data}</td>
+                <td class="fw-bold">${t.descricao} ${badgeDuplicado}</td>
+                <td class="text-end fw-bold ${colorValor}" style="font-family: monospace;">${valorFormatado}</td>
+                <td>${templateSelect.replace('class="form-select', `class="form-select cat-select-${index}`)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        atualizarCheckAll();
+    }
+
+    function toggleAll(source) {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+    }
+    
+    function atualizarCheckAll() {
+        const allChecked = document.querySelectorAll('.row-checkbox:not(:checked)').length === 0;
+        document.getElementById('check-all').checked = allChecked;
+    }
+
+    document.getElementById('tbody-revisao').addEventListener('change', function(e) {
+        if(e.target.classList.contains('row-checkbox')) {
+            atualizarCheckAll();
+        }
+    });
+
+    function cancelarRevisao() {
+        document.getElementById('fase-revisao').style.display = 'none';
+        document.getElementById('fase-upload').style.display = 'block';
+        fileInput.value = '';
+        atualizarArquivo();
+    }
+
+    function confirmarImportacao() {
+        const selecionados = [];
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                const index = cb.getAttribute('data-index');
+                const t = transacoesParaImportar[index];
+                const selectElement = document.querySelector(`.cat-select-${index}`);
+                t.categoria = selectElement ? selectElement.value : '';
+                selecionados.push(t);
+            }
+        });
+
+        if (selecionados.length === 0) {
+            alert("Selecione pelo menos um lançamento para importar.");
+            return;
+        }
+
+        const payload = {
+            conta_corrente_id: document.getElementById('conta_corrente_id').value,
+            transacoes: selecionados
+        };
+
+        const btn = event.currentTarget;
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Salvando...';
+        btn.disabled = true;
+
+        fetch("{{ url_for('importacao_universal_commit') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                if (data.pendentes > 0) {
+                    // Mostrar Fase de Quarentena
+                    document.getElementById('fase-revisao').style.display = 'none';
+                    document.getElementById('fase-quarentena').style.display = 'block';
+                    document.getElementById('msg-quarentena').textContent = data.mensagem;
+                } else {
+                    alert(data.mensagem);
+                    window.location.href = "{{ url_for('contabil_lancamentos') }}";
+                }
+            } else {
+                alert("Erro ao importar: " + data.mensagem);
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Erro de conexão: " + err);
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+        });
+    }
+
+    function dispararReprocessamento() {
+        const btn = document.getElementById('btn-reprocessar');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processando...';
+        btn.disabled = true;
+
+        fetch("/api/lancamentos-pendentes/reprocessar", { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.mensagem);
+            if (data.sucesso) {
+                window.location.href = "{{ url_for('contabil_lancamentos') }}";
+            } else {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    }
+</script>
+
+<!-- Fase 3: Quarentena -->
+<div class="card dv-card p-4 mt-4" id="fase-quarentena" style="display: none; border: 1px solid var(--warning);">
+    <div class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom border-secondary">
+        <div>
+            <h5 class="card-title fw-bold text-warning mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i> Lançamentos em Quarentena</h5>
+            <p class="text-muted small mb-0" id="msg-quarentena"></p>
+        </div>
+        <div>
+            <button class="btn btn-outline-info me-2" onclick="window.open('/plano-contas', '_blank')">
+                <i class="bi bi-plus-circle"></i> Cadastrar Conta Contábil
+            </button>
+            <button class="btn btn-outline-info me-2" onclick="window.open('/config/contas-correntes', '_blank')">
+                <i class="bi bi-bank"></i> Cadastrar Conta Corrente
+            </button>
+            <button class="btn btn-warning fw-bold text-dark" id="btn-reprocessar" onclick="dispararReprocessamento()">
+                <i class="bi bi-arrow-repeat me-2"></i> Reprocessar Lançamentos
+            </button>
+        </div>
+    </div>
+    <div class="alert alert-warning" style="background: rgba(255,193,7,0.1); border-color: rgba(255,193,7,0.2); color: #ffd54f;">
+        <strong>Atenção:</strong> Alguns lançamentos não puderam ser efetivados pois a conta corrente ou a categoria selecionada não estão vinculadas corretamente no sistema. Cadastre-as usando os botões acima e, em seguida, clique em "Reprocessar".
+    </div>
+</div>
+{% endblock %}

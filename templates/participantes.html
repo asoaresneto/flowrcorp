@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Estilos personalizados para aprimorar a estética Dark Premium */
+    .partner-row {
+        transition: background-color 0.2s ease;
+    }
+    .partner-row:hover {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    .avatar-circle {
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .partner-row:hover .avatar-circle {
+        transform: scale(1.08);
+        background-color: rgba(37, 99, 235, 0.2) !important;
+    }
+    .btn-edit-action {
+        border-radius: 8px;
+        transition: all 0.25s ease;
+        border: 1px solid rgba(37, 99, 235, 0.3);
+        background: transparent;
+        color: var(--primary) !important;
+    }
+    .btn-edit-action:hover {
+        background: var(--primary) !important;
+        color: #fff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px var(--primary-glow);
+    }
+    .active-tab-btn {
+        background: var(--primary) !important;
+        box-shadow: 0 0 10px var(--primary-glow);
+    }
+    .form-input-premium {
+        border-radius: 10px !important;
+    }
+    .badge-premium {
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.75rem;
+        padding: 5px 10px;
+    }
+</style>
+
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-people-fill text-primary fs-4"></i>
+            <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Clientes e Fornecedores</h2>
+        </div>
+    </div>
+
+    <!-- Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show border-0" role="alert" style="border-radius: 12px; background-color: {% if category == 'success' %}rgba(20, 83, 45, 0.85){% else %}rgba(153, 27, 27, 0.85){% endif %}; color: #fff; backdrop-filter: blur(8px);">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi {% if category == 'success' %}bi-check-circle-fill text-success{% else %}bi-exclamation-triangle-fill text-danger{% endif %}"></i>
+                        <span>{{ msg }}</span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Grid de KPIs (Blue3 dv-kpi) -->
+    <div class="row g-3 mb-4">
+        <!-- KPI 1: Total de Parceiros -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Total de Parceiros</span>
+                    <i class="bi bi-people text-primary fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-white">{{ participantes | length }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Clientes e Fornecedores cadastrados</div>
+            </div>
+        </div>
+        
+        <!-- KPI 2: Clientes -->
+        {% set ns_c = namespace(count=0) %}
+        {% for p in participantes %}
+            {% if p.tipo == 'Cliente' or p.tipo == 'Ambos' %}
+                {% set ns_c.count = ns_c.count + 1 %}
+            {% endif %}
+        {% endfor %}
+        <div class="col-xl-3 col-md-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Clientes</span>
+                    <i class="bi bi-person-check text-success fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-success">{{ ns_c.count }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Prontos para faturamento e receitas</div>
+            </div>
+        </div>
+        
+        <!-- KPI 3: Fornecedores -->
+        {% set ns_f = namespace(count=0) %}
+        {% for p in participantes %}
+            {% if p.tipo == 'Fornecedor' or p.tipo == 'Ambos' %}
+                {% set ns_f.count = ns_f.count + 1 %}
+            {% endif %}
+        {% endfor %}
+        <div class="col-xl-3 col-md-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Fornecedores</span>
+                    <i class="bi bi-truck text-danger fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-danger">{{ ns_f.count }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Mapeados para contas a pagar</div>
+            </div>
+        </div>
+
+        <!-- KPI 4: Limite do Plano (CNPJs) -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Consumo de Limite (CNPJs)</span>
+                    <i class="bi bi-shield-check text-accent fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-accent">{{ cnpjs_atuais }} / {{ max_cnpjs }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Empresas com CNPJ ativo registradas</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Coluna Esquerda: Listagem de Parceiros -->
+        <div class="col-lg-8">
+            <div class="card dv-card p-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center border-bottom border-secondary pb-3 mb-3 gap-3">
+                    <div>
+                        <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Parceiros de Negócios</h5>
+                        <p class="text-muted small mb-0">Listagem unificada de clientes e fornecedores do Grupo Econômico.</p>
+                    </div>
+                    
+                    <!-- Abas Filtráveis -->
+                    <div class="btn-group btn-group-sm p-1" role="group" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px;">
+                        <button type="button" class="btn btn-sm text-white px-3 fw-bold active-tab-btn" onclick="switchTab(this, 'todos')" style="border-radius: 8px; font-size: 0.8rem; background: var(--primary); transition: var(--transition-smooth);">Todos</button>
+                        <button type="button" class="btn btn-sm text-white px-3 fw-bold" onclick="switchTab(this, 'cliente')" style="border-radius: 8px; font-size: 0.8rem; background: transparent; transition: var(--transition-smooth);">Clientes</button>
+                        <button type="button" class="btn btn-sm text-white px-3 fw-bold" onclick="switchTab(this, 'fornecedor')" style="border-radius: 8px; font-size: 0.8rem; background: transparent; transition: var(--transition-smooth);">Fornecedores</button>
+                    </div>
+                </div>
+
+                <!-- Campo de Busca Rápida -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-secondary text-muted" style="border-top-left-radius: 10px; border-bottom-left-radius: 10px;">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="search-input" class="form-control form-input border-start-0" placeholder="Buscar parceiro por nome, CNPJ/CPF, e-mail..." onkeyup="filterPartners()" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                        <thead>
+                            <tr class="text-muted small" style="border-bottom-width: 2px;">
+                                <th>Nome / Razão Social</th>
+                                <th>CPF / CNPJ</th>
+                                <th>Tipo</th>
+                                <th>Contato</th>
+                                <th>Dados Bancários</th>
+                                <th class="text-end" style="width: 100px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partners-tbody">
+                            {% for p in participantes %}
+                            <tr class="partner-row" data-tipo="{{ p.tipo | lower }}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <td class="fw-bold py-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="avatar-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.25);">
+                                            <i class="bi bi-person text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <span class="d-block text-white fw-bold">{{ p.nome_razao }}</span>
+                                            <span class="text-muted small" style="font-size: 0.75rem; font-weight: normal;">IE: {{ p.inscricao_estadual or 'Isento' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark-subtle text-muted border border-secondary px-2 py-1 font-monospace" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ p.cnpj_cpf }}</span>
+                                </td>
+                                <td>
+                                    {% if p.tipo == 'Cliente' %}
+                                    <span class="badge bg-success-subtle text-success border border-success/10 badge-premium"><i class="bi bi-arrow-up-right me-1"></i>Cliente</span>
+                                    {% elif p.tipo == 'Fornecedor' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger/10 badge-premium"><i class="bi bi-arrow-down-left me-1"></i>Fornecedor</span>
+                                    {% else %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary/10 badge-premium"><i class="bi bi-arrow-left-right me-1"></i>Ambos</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="small d-block text-white fw-semibold" style="font-size: 0.85rem;">{{ p.email_financeiro }}</span>
+                                    <span class="text-muted small" style="font-size: 0.75rem;"><i class="bi bi-telephone me-1"></i>{{ p.telefone or '-' }}</span>
+                                </td>
+                                <td>
+                                    {% if p.dados_bancarios and p.dados_bancarios.banco %}
+                                    <span class="small d-block text-white" style="font-family: monospace; font-size: 0.8rem;">
+                                        <i class="bi bi-bank text-accent me-1"></i>{{ p.dados_bancarios.banco }}
+                                    </span>
+                                    <span class="text-muted small" style="font-family: monospace; font-size: 0.75rem;">
+                                        Ag: {{ p.dados_bancarios.agencia }} | Cc: {{ p.dados_bancarios.conta }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted small italic" style="font-size: 0.75rem;"><i class="bi bi-bank2 me-1"></i>Não cadastrado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-edit-action px-2" onclick="abrirEdicao('{{ p._id }}')" title="Editar Parceiro">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-5">
+                                    <i class="bi bi-people fs-2 d-block mb-2 text-muted" style="opacity: 0.5;"></i>
+                                    Nenhum parceiro de negócios cadastrado ainda.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita: Formulário de Cadastro -->
+        <div class="col-lg-4">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Novo Parceiro</h5>
+                    <p class="text-muted small mb-0">Cadastre clientes e fornecedores para movimentações e faturamento.</p>
+                </div>
+
+                <form action="{{ url_for('salvar_participante') }}" method="POST" class="d-flex flex-column gap-3">
+                    <div>
+                        <label for="tipo" class="form-label text-muted small fw-bold">Tipo de Parceiro</label>
+                        <select id="tipo" name="tipo" class="form-select form-input form-input-premium" required>
+                            <option value="Cliente">Cliente</option>
+                            <option value="Fornecedor">Fornecedor</option>
+                            <option value="Ambos">Ambos (Cliente e Fornecedor)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="nome_razao" class="form-label text-muted small fw-bold">Razão Social / Nome Completo</label>
+                        <input type="text" id="nome_razao" name="nome_razao" class="form-control form-input form-input-premium" placeholder="Ex: Alfa Distribuidora Ltda" required>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label for="cnpj_cpf" class="form-label text-muted small fw-bold">CNPJ / CPF</label>
+                            <input type="text" id="cnpj_cpf" name="cnpj_cpf" class="form-control form-input form-input-premium" placeholder="Ex: 00.000.000/0001-00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inscricao_estadual" class="form-label text-muted small fw-bold">Inscrição Estadual</label>
+                            <input type="text" id="inscricao_estadual" name="inscricao_estadual" class="form-control form-input form-input-premium" placeholder="Ex: Isento">
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-7">
+                            <label for="email_financeiro" class="form-label text-muted small fw-bold">E-mail Financeiro</label>
+                            <input type="email" id="email_financeiro" name="email_financeiro" class="form-control form-input form-input-premium" placeholder="Ex: nfe@parceiro.com" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="telefone" class="form-label text-muted small fw-bold">Telefone</label>
+                            <input type="text" id="telefone" name="telefone" class="form-control form-input form-input-premium" placeholder="Ex: (11) 98765-4321">
+                        </div>
+                    </div>
+
+                    <!-- Dados Bancários -->
+                    <div class="mt-2 border-top border-secondary pt-3">
+                        <h6 class="text-accent fw-bold mb-2" style="font-family: 'Rubik', sans-serif; font-size: 0.85rem;">Dados Bancários Padrão</h6>
+                        
+                        <div class="mb-2">
+                            <label for="banco" class="form-label text-muted small fw-bold" style="font-size: 0.75rem;">Banco</label>
+                            <input type="text" id="banco" name="banco" class="form-control form-input form-input-premium" placeholder="Ex: Itaú (341)">
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label for="agencia" class="form-label text-muted small fw-bold" style="font-size: 0.75rem;">Agência</label>
+                                <input type="text" id="agencia" name="agencia" class="form-control form-input form-input-premium" placeholder="Ex: 1234">
+                            </div>
+                            <div class="col-6">
+                                <label for="conta" class="form-label text-muted small fw-bold" style="font-size: 0.75rem;">Conta Corrente</label>
+                                <input type="text" id="conta" name="conta" class="form-control form-input form-input-premium" placeholder="Ex: 56789-0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 mt-3" style="border-radius: 10px; height: 45px; font-weight: 600; transition: var(--transition-smooth);">
+                        <i class="bi bi-person-plus-fill"></i> Salvar Parceiro
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bootstrap 5 para Edição de Participante -->
+<div class="modal fade" id="editParticipanteModal" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content text-white" style="background-color: #0b0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; backdrop-filter: blur(16px); box-shadow: 0 20px 50px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="modalEditarLabel" style="font-family: 'Rubik', sans-serif;">
+                    <i class="bi bi-pencil-square text-primary"></i>
+                    <span>Editar Parceiro de Negócios</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem;"></button>
+            </div>
+            <form action="{{ url_for('atualizar_participante') }}" method="POST">
+                <div class="modal-body" style="padding: 10px 24px 24px 24px;">
+                    <input type="hidden" id="edit_id" name="participante_id">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="edit_tipo" class="form-label text-muted small fw-bold">Tipo de Parceiro</label>
+                            <select id="edit_tipo" name="tipo" class="form-select form-input form-input-premium" required>
+                                <option value="Cliente">Cliente</option>
+                                <option value="Fornecedor">Fornecedor</option>
+                                <option value="Ambos">Ambos (Cliente e Fornecedor)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_nome_razao" class="form-label text-muted small fw-bold">Razão Social / Nome Completo</label>
+                            <input type="text" id="edit_nome_razao" name="nome_razao" class="form-control form-input form-input-premium" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_cnpj_cpf" class="form-label text-muted small fw-bold">CNPJ / CPF</label>
+                            <input type="text" id="edit_cnpj_cpf" name="cnpj_cpf" class="form-control form-input form-input-premium" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_inscricao_estadual" class="form-label text-muted small fw-bold">Inscrição Estadual</label>
+                            <input type="text" id="edit_inscricao_estadual" name="inscricao_estadual" class="form-control form-input form-input-premium">
+                        </div>
+                        <div class="col-md-7">
+                            <label for="edit_email_financeiro" class="form-label text-muted small fw-bold">E-mail Financeiro</label>
+                            <input type="email" id="edit_email_financeiro" name="email_financeiro" class="form-control form-input form-input-premium" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="edit_telefone" class="form-label text-muted small fw-bold">Telefone</label>
+                            <input type="text" id="edit_telefone" name="telefone" class="form-control form-input form-input-premium">
+                        </div>
+                    </div>
+
+                    <!-- Dados Bancários -->
+                    <div class="mt-4 border-top border-secondary pt-3">
+                        <h6 class="text-accent fw-bold mb-3" style="font-family: 'Rubik', sans-serif; font-size: 0.9rem;">Dados Bancários Padrão</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="edit_banco" class="form-label text-muted small fw-bold" style="font-size: 0.8rem;">Banco</label>
+                                <input type="text" id="edit_banco" name="banco" class="form-control form-input form-input-premium" placeholder="Ex: Itaú (341)">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit_agencia" class="form-label text-muted small fw-bold" style="font-size: 0.8rem;">Agência</label>
+                                <input type="text" id="edit_agencia" name="agencia" class="form-control form-input form-input-premium">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit_conta" class="form-label text-muted small fw-bold" style="font-size: 0.8rem;">Conta Corrente</label>
+                                <input type="text" id="edit_conta" name="conta" class="form-control form-input form-input-premium">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0" style="padding: 10px 24px 24px 24px;">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 500;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-2" style="border-radius: 10px; font-weight: 600;">
+                        <i class="bi bi-check-lg"></i>
+                        <span>Salvar Alterações</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script JS para Filtros e Busca de Edição -->
+<script>
+function switchTab(button, filterType) {
+    const buttons = button.parentNode.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.classList.remove('active-tab-btn');
+        btn.style.background = 'transparent';
+        btn.style.boxShadow = 'none';
+    });
+    
+    button.classList.add('active-tab-btn');
+    button.style.background = 'var(--primary)';
+    
+    filterPartners();
+}
+
+function filterPartners() {
+    const input = document.getElementById('search-input');
+    const filter = input.value.toLowerCase().trim();
+    
+    // Encontra o tipo de filtro ativo
+    const activeTabBtn = document.querySelector('.active-tab-btn');
+    let tabFilter = 'todos';
+    if (activeTabBtn) {
+        const text = activeTabBtn.innerText.toLowerCase();
+        if (text.includes('cliente')) tabFilter = 'cliente';
+        else if (text.includes('fornecedor')) tabFilter = 'fornecedor';
+    }
+    
+    const rows = document.querySelectorAll('.partner-row');
+    rows.forEach(row => {
+        const rowText = row.innerText.toLowerCase();
+        const rowType = row.getAttribute('data-tipo');
+        
+        const matchesSearch = rowText.includes(filter);
+        let matchesTab = false;
+        
+        if (tabFilter === 'todos') {
+            matchesTab = true;
+        } else if (tabFilter === 'cliente') {
+            matchesTab = (rowType === 'cliente' || rowType === 'ambos');
+        } else if (tabFilter === 'fornecedor') {
+            matchesTab = (rowType === 'fornecedor' || rowType === 'ambos');
+        }
+        
+        if (matchesSearch && matchesTab) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function abrirEdicao(id) {
+    fetch("{{ url_for('buscar_participante_json', id='') }}" + id)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Erro de rede ao carregar os dados.");
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Preenche os campos do formulário no modal
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_tipo').value = data.tipo || 'Cliente';
+            document.getElementById('edit_nome_razao').value = data.nome_razao || '';
+            document.getElementById('edit_cnpj_cpf').value = data.cnpj_cpf || '';
+            document.getElementById('edit_inscricao_estadual').value = data.inscricao_estadual || '';
+            document.getElementById('edit_email_financeiro').value = data.email_financeiro || '';
+            document.getElementById('edit_telefone').value = data.telefone || '';
+            
+            if (data.dados_bancarios) {
+                document.getElementById('edit_banco').value = data.dados_bancarios.banco || '';
+                document.getElementById('edit_agencia').value = data.dados_bancarios.agencia || '';
+                document.getElementById('edit_conta').value = data.dados_bancarios.conta || '';
+            } else {
+                document.getElementById('edit_banco').value = '';
+                document.getElementById('edit_agencia').value = '';
+                document.getElementById('edit_conta').value = '';
+            }
+            
+            // Abre o modal de edição
+            const modalElement = document.getElementById('editParticipanteModal');
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        })
+        .catch(error => {
+            console.error("Erro na busca do parceiro:", error);
+            alert("Não foi possível buscar as informações do parceiro de negócio.");
+        });
+}
+</script>
+{% endblock %}

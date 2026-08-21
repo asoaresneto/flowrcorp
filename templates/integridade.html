@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-shield-check text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Auditoria - Integridade de Dados OFX</h2>
+    </div>
+
+    <!-- Seção de Alertas de Auditoria -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Erros e Alertas de Sequência Contábil</h5>
+                    <p class="text-muted small mb-0">Auditoria cronológica que verifica buracos de dados (gaps) ou quebras na sequência matemática dos saldos bancários.</p>
+                </div>
+                
+                {% if not alertas %}
+                <div class="p-4 text-center text-success" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px;">
+                    <i class="bi bi-check-circle-fill fs-2 mb-2"></i>
+                    <h6 class="fw-bold m-0">Nenhuma irregularidade encontrada nos extratos importados.</h6>
+                    <p class="small m-0 text-muted mt-1">A sequência cronológica e de saldos está consistente e em conformidade.</p>
+                </div>
+                {% else %}
+                <div class="d-flex flex-column gap-2">
+                    {% for a in alertas %}
+                    <div class="alert alert-{% if a.tipo == 'Discrepância de Saldo' %}danger{% else %}warning{% endif %} d-flex gap-2 align-items-start m-0" role="alert" style="border-radius: 10px;">
+                        <i class="bi bi-exclamation-triangle-fill fs-5" style="flex-shrink: 0;"></i>
+                        <div>
+                            <strong class="d-block">{{ a.tipo }}</strong>
+                            <span class="small">{{ a.mensagem }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Logs de Arquivos Importados -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Histórico de Arquivos Conciliados</h5>
+            <p class="text-muted small mb-0">Logs operacionais de arquivos importados e processados pelo sistema para este Grupo Econômico.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th>Data de Importação</th>
+                        <th>Nome do Arquivo Extrato</th>
+                        <th style="text-align: center; width: 100px;">Transações</th>
+                        <th class="text-end" style="width: 150px;">Soma Período</th>
+                        <th class="text-end" style="width: 150px;">Saldo Final OFX</th>
+                        <th>Período Extrato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in arquivos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td><span class="text-muted" style="font-size: 0.85rem;">{{ f.data_importacao | formata_data }}</span></td>
+                        <td class="fw-bold"><i class="bi bi-file-earmark-code me-2 text-primary"></i>{{ f.nome_arquivo }}</td>
+                        <td class="text-center"><span class="badge bg-secondary">{{ f.total_transacoes }}</span></td>
+                        <td class="text-end fw-bold {% if f.soma_transacoes >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace;">
+                            {{ f.soma_transacoes | real }}
+                        </td>
+                        <td class="text-end fw-bold text-accent" style="font-family: monospace;">
+                            {{ f.saldo_final | real }}
+                        </td>
+                        <td>
+                            <span class="small text-muted">
+                                De: <strong class="text-white" style="font-family: monospace;">{{ f.data_inicio | formata_data }}</strong> 
+                                Até: <strong class="text-white" style="font-family: monospace;">{{ f.data_fim | formata_data }}</strong>
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum arquivo extrato importado até o momento.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho de Página Limpo -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-tags text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Configurações - Centros de Custo</h2>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Grid de Conteúdo Responsiva -->
+    <div class="row g-4">
+        <!-- Lado Esquerdo (.col-lg-8): Tabela com centros de custo existentes -->
+        <div class="col-lg-8">
+            <div class="card dv-card p-4 h-100">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Centros de Custo Cadastrados</h5>
+                    <p class="text-muted small mb-0">Divisões operacionais para controle e rateio de receitas e despesas</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                        <thead>
+                            <tr class="text-muted small" style="border-bottom-width: 2px;">
+                                <th>Código</th>
+                                <th>Nome do Centro de Custo</th>
+                                <th>Departamento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in centros %}
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <td><code class="text-white bg-dark px-2 py-1 rounded" style="font-size: 0.85rem; font-family: monospace;">{{ c.codigo }}</code></td>
+                                <td><strong class="text-white"><i class="bi bi-tag-fill me-2 text-primary"></i>{{ c.nome }}</strong></td>
+                                <td>{{ c.departamento or 'Não informado' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">Nenhum centro de custo cadastrado. Crie um ao lado para vinculá-lo aos seus lançamentos.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lado Direito (.col-lg-4): Formulário para novo centro de custo -->
+        <div class="col-lg-4">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Novo Centro de Custo</h5>
+                    <p class="text-muted small mb-0">Cadastre centros para segmentação financeira</p>
+                </div>
+
+                <form action="{{ url_for('config_centros_custo') }}" method="POST">
+                    <div class="form-group mb-3">
+                        <label for="codigo" class="form-label small fw-bold text-muted">Código do Centro (ex: CC_001)</label>
+                        <input type="text" id="codigo" name="codigo" class="form-control" placeholder="ex: COM_001" required style="border-radius: 10px; font-family: monospace;">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="nome" class="form-label small fw-bold text-muted">Nome do Centro de Custo</label>
+                        <input type="text" id="nome" name="nome" class="form-control" placeholder="ex: Departamento Comercial" required style="border-radius: 10px;">
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="departamento" class="form-label small fw-bold text-muted">Departamento Geral / Área</label>
+                        <input type="text" id="departamento" name="departamento" class="form-control" placeholder="ex: Vendas / Comercial" style="border-radius: 10px;">
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="reset" class="btn btn-outline-secondary px-4" style="border-radius: 10px; font-weight: 600;">Limpar</button>
+                        <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px; font-weight: 600;">Cadastrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

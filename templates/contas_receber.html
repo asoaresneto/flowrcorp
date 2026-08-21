@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho de Página Coerente -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-arrow-up-right-circle-fill text-success fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Controle de Contas a Receber</h2>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Divisão em Grid Responsiva (row g-4) -->
+    <div class="row g-4">
+        <!-- Lado Esquerdo (.col-lg-8): Tabela de Listagem -->
+        <div class="col-lg-8">
+            <div class="card dv-card p-4 h-100">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Recebíveis do Período</h5>
+                    <p class="text-muted small mb-0">Lançamentos de recebíveis financeiros ordenados por data de vencimento</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                        <thead>
+                            <tr class="text-muted small" style="border-bottom-width: 2px;">
+                                <th>Cliente</th>
+                                <th>Descrição / Cód. Contábil</th>
+                                <th>Vencimento / Emissão</th>
+                                <th class="text-end">Valor</th>
+                                <th>Status / Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in lancamentos %}
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <td><strong class="text-white">{{ l.participante_nome }}</strong></td>
+                                <td>
+                                    <span class="fw-bold">{{ l.descricao }}</span><br>
+                                    <span class="badge bg-secondary" style="font-family: monospace; font-size: 0.75rem;">{{ l.conta_codigo }}</span>
+                                    <span class="text-muted small ms-1">{{ l.conta_nome }}</span>
+                                </td>
+                                                       <span class="fw-bold">{{ l.data_vencimento | formata_data }}</span><br>
+                                    <span class="text-muted" style="font-size: 0.75rem;">Emissão: {{ l.data_emissao | formata_data }}</span>
+                                </td>
+                                <td class="text-end text-success fw-bold" style="font-family: monospace; font-size: 0.95rem;">
+                                    +{{ l.valor | real }}
+                                </td>
+                                <td>
+                                    {% if l.status == 'Recebido' %}
+                                        <span class="badge bg-success-subtle text-success" style="font-size: 0.75rem; padding: 4px 8px;">Recebido</span><br>
+                                        <span class="text-muted" style="font-size: 0.7rem;">Caixa: {{ l.data_recebimento | formata_data }}</span>
+                                    {% else %}
+                                        <div class="d-flex flex-column align-items-start gap-1">
+                                            <span class="badge bg-warning-subtle text-warning" style="font-size: 0.75rem; padding: 4px 8px;" id="status-badge-{{ l._id }}">Pendente</span>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleLiquidation('{{ l._id }}')">
+                                                Receber
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Formulário de Liquidação Inline -->
+                                        <div id="liq-form-{{ l._id }}" class="liquidation-inline-form mt-2 p-2 rounded" style="display: none; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); max-width: 200px;">
+                                            <form action="{{ url_for('contas_receber_liquidar') }}" method="POST">
+                                                <input type="hidden" name="lancamento_id" value="{{ l._id }}">
+                                                <label class="form-label text-muted small mb-1" style="font-size: 0.75rem;">Data de Recebimento</label>
+                                                <input type="date" name="data_recebimento" class="form-control form-control-sm mb-2" required id="date-input-{{ l._id }}" style="border-radius: 8px;">
+                                                <div class="d-flex gap-1">
+                                                    <button type="submit" class="btn btn-xs btn-success w-50" style="font-size: 0.7rem; padding: 3px 6px; border-radius: 6px;">Confirmar</button>
+                                                    <button type="button" class="btn btn-xs btn-outline-secondary w-50" style="font-size: 0.7rem; padding: 3px 6px; border-radius: 6px;" onclick="toggleLiquidation('{{ l._id }}')">Cancelar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Nenhum faturamento contábil lançado a receber.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lado Direito (.col-lg-4): Formulário de Cadastro -->
+        <div class="col-lg-4">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Novo Lançamento</h5>
+                    <p class="text-muted small mb-0">Lançamento de receita pelo regime de competência</p>
+                </div>
+                
+                <form action="{{ url_for('contas_receber_salvar') }}" method="POST">
+                    <div class="form-group mb-3">
+                        <label for="participante_id" class="form-label small fw-bold text-muted">Cliente</label>
+                        <div class="input-group">
+                            <select id="participante_id" name="participante_id" class="form-select" required style="border-top-left-radius: 10px; border-bottom-left-radius: 10px; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+                                <option value="">Selecione um cliente...</option>
+                                {% for c in clientes %}
+                                <option value="{{ c._id }}">{{ c.nome_razao }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-primary btn-quick-add" onclick="openQuickAddModal()" style="border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-top-left-radius: 0; border-bottom-left-radius: 0; font-weight: bold; width: 42px;" title="Cadastrar Cliente Rápido">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="descricao" class="form-label small fw-bold text-muted">Descrição da Receita</label>
+                        <input type="text" id="descricao" name="descricao" class="form-control" placeholder="ex: Faturamento BPO Contábil - Mês Junho" required style="border-radius: 10px;">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="valor" class="form-label small fw-bold text-muted">Valor (R$)</label>
+                        <input type="text" id="valor" name="valor" class="form-control mask-money" placeholder="ex: 5.500,00" required style="border-radius: 10px;">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="data_emissao" class="form-label small fw-bold text-muted">Emissão</label>
+                                <input type="date" id="data_emissao" name="data_emissao" class="form-control" required style="border-radius: 10px;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="data_vencimento" class="form-label small fw-bold text-muted">Vencimento</label>
+                                <input type="date" id="data_vencimento" name="data_vencimento" class="form-control" required style="border-radius: 10px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="conta_codigo" class="form-label small fw-bold text-muted">Conta Contábil de Receita</label>
+                        <select id="conta_codigo" name="conta_codigo" class="form-select" required style="border-radius: 10px;">
+                            <option value="">Selecione a conta analítica...</option>
+                            {% for c in contas_receita %}
+                            <option value="{{ c.codigo }}">{{ c.codigo }} - {{ c.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="centro_custo" class="form-label small fw-bold text-muted">Centro de Custo</label>
+                        <select id="centro_custo" name="centro_custo" class="form-select" style="border-radius: 10px;">
+                            <option value="Geral">Geral</option>
+                            {% for cc in centros_custo %}
+                            {% if cc.nome != "Geral" %}
+                            <option value="{{ cc.nome }}">{{ cc.nome }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="reset" class="btn btn-outline-secondary px-4" style="border-radius: 10px; font-weight: 600;">Limpar</button>
+                        <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px; font-weight: 600;">Lançar Faturamento</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Cadastro Rápido de Cliente -->
+<div id="quick-add-modal" class="modal-overlay">
+    <div class="modal-card glass">
+        <h4 class="text-white fw-bold mb-1" style="font-family: 'Rubik', sans-serif;">Novo Cliente Rápido</h4>
+        <p class="text-muted small mb-4">Adicione o parceiro comercial sem sair do faturamento atual</p>
+        
+        <div id="modal-error" class="alert alert-danger" style="display: none; padding: 10px 14px; font-size: 0.85rem; margin-bottom: 15px; border-radius: 8px;"></div>
+        
+        <form id="quick-add-form" onsubmit="submitQuickAdd(event)">
+            <input type="hidden" name="tipo" value="Cliente">
+            
+            <div class="form-group mb-3">
+                <label for="modal_nome" class="form-label small fw-bold text-muted">Nome / Razão Social</label>
+                <input type="text" id="modal_nome" name="nome_razao" class="form-control" placeholder="ex: Supermercado Central S.A." required style="border-radius: 10px;">
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="modal_cnpj" class="form-label small fw-bold text-muted">CNPJ / CPF</label>
+                <input type="text" id="modal_cnpj" name="cnpj_cpf" class="form-control" placeholder="ex: 22.333.444/0001-55" required style="border-radius: 10px;">
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="modal_email" class="form-label small fw-bold text-muted">E-mail Financeiro</label>
+                <input type="email" id="modal_email" name="email_financeiro" class="form-control" placeholder="ex: compras@central.com" required style="border-radius: 10px;">
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-outline-secondary px-4" onclick="closeQuickAddModal()" style="border-radius: 10px; font-weight: 600;">Cancelar</button>
+                <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px; font-weight: 600;">Salvar Parceiro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lógica de Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const today = new Date().toISOString().split('T')[0];
+    const emissaoInput = document.getElementById("data_emissao");
+    if (emissaoInput) {
+        emissaoInput.value = today;
+    }
+});
+
+function toggleLiquidation(id) {
+    const form = document.getElementById(`liq-form-${id}`);
+    const badge = document.getElementById(`status-badge-${id}`);
+    if (form.style.display === "none") {
+        form.style.display = "block";
+        badge.style.display = "none";
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById(`date-input-${id}`).value = today;
+    } else {
+        form.style.display = "none";
+        badge.style.display = "";
+    }
+}
+
+function openQuickAddModal() {
+    document.getElementById("quick-add-modal").classList.add("open");
+    document.getElementById("modal-error").style.display = "none";
+    document.getElementById("modal_nome").focus();
+}
+
+function closeQuickAddModal() {
+    document.getElementById("quick-add-modal").classList.remove("open");
+    document.getElementById("quick-add-form").reset();
+}
+
+function submitQuickAdd(event) {
+    event.preventDefault();
+    const form = document.getElementById("quick-add-form");
+    const formData = new FormData(form);
+    const errorEl = document.getElementById("modal-error");
+    
+    errorEl.style.display = "none";
+    
+    fetch("{{ url_for('api_participantes_rapido') }}", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+    .then(res => {
+        if (res.status === 200 && res.body.success) {
+            const selectEl = document.getElementById("participante_id");
+            const newOption = document.createElement("option");
+            newOption.value = res.body.id;
+            newOption.textContent = res.body.nome_razao;
+            newOption.selected = true;
+            selectEl.appendChild(newOption);
+            
+            closeQuickAddModal();
+        } else {
+            errorEl.textContent = res.body.error || "Ocorreu um erro ao salvar.";
+            errorEl.style.display = "block";
+        }
+    })
+    .catch(err => {
+        console.error("Erro no cadastro rápido:", err);
+        errorEl.textContent = "Erro na rede. Não foi possível registrar o parceiro.";
+        errorEl.style.display = "block";
+    });
+}
+</script>
+{% endblock %}

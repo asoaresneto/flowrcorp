@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-people-fill text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Gestão de Usuários do Grupo</h2>
+    </div>
+
+    <div class="registration-container row g-4">
+        <!-- Esquerda: Lista de Usuários -->
+        <div class="col-lg-8">
+            <div class="card dv-card h-100 p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Usuários Ativos</h5>
+                    <p class="text-muted small mb-0">Lista de contas de colaboradores autorizadas a acessar as ferramentas financeiras deste Grupo Econômico.</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                        <thead>
+                            <tr class="text-muted small" style="border-bottom-width: 2px;">
+                                <th>Nome Completo</th>
+                                <th>E-mail de Acesso</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in usuarios %}
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <td class="fw-bold"><i class="bi bi-person-circle me-2 text-primary"></i>{{ u.nome }}</td>
+                                <td style="font-family: monospace;" class="text-muted">{{ u.email }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">Nenhum usuário cadastrado neste grupo.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direita: Formulário de Cadastro -->
+        <div class="col-lg-4">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Novo Usuário</h5>
+                    <p class="text-muted small mb-0">Adicione um novo colaborador respeitando o limite contratado de usuários do seu plano.</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('salvar_usuario') }}" class="d-flex flex-column gap-3">
+                    <div>
+                        <label for="nome" class="form-label text-muted small fw-bold">Nome Completo</label>
+                        <input type="text" id="nome" name="nome" class="form-control form-input" placeholder="Ex: João da Silva" required>
+                    </div>
+
+                    <div>
+                        <label for="email" class="form-label text-muted small fw-bold">E-mail de Acesso</label>
+                        <input type="email" id="email" name="email" class="form-control form-input" placeholder="Ex: joao@empresa.com" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 mt-2" style="border-radius: 12px; height: 45px; font-weight: 600;">
+                        <i class="bi bi-person-plus-fill"></i> Cadastrar Usuário
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

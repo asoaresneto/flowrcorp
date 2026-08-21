@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-journal-text text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Contabilidade - Livro Razão</h2>
+    </div>
+
+    <!-- Barra de Filtros -->
+    <div class="card dv-card mb-4 p-3">
+        <form method="GET" action="{{ url_for('contabil_razao') }}" class="row g-3 align-items-end">
+            <div class="col-md-4 col-sm-6">
+                <label for="periodo" class="form-label text-muted small fw-bold">Período (Competência)</label>
+                <input type="month" id="periodo" name="periodo" class="form-control form-input" value="{{ periodo }}" onchange="this.form.submit()">
+            </div>
+            <div class="col-md-4 col-sm-6">
+                <label for="centro_custo" class="form-label text-muted small fw-bold">Centro de Custo</label>
+                <select id="centro_custo" name="centro_custo" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="Geral">Todos os Centros</option>
+                    {% for cc in centros_custo %}
+                    <option value="{{ cc }}" {% if centro_custo_filtro == cc %}selected{% endif %}>
+                        {{ cc }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 col-sm-12 d-flex gap-2">
+                <a href="{{ url_for('contabil_razao') }}" class="btn btn-sm btn-outline-secondary w-50 d-flex align-items-center justify-content-center" style="border-radius: 10px; height: 42px; font-weight: 600;">Limpar</a>
+                <button type="submit" class="btn btn-sm btn-primary w-50 d-flex align-items-center justify-content-center" style="border-radius: 10px; height: 42px; font-weight: 600;">Filtrar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Lista de Contas e Postings -->
+    {% if not razao_dados %}
+    <div class="card dv-card p-5 text-center text-muted">
+        <i class="bi bi-folder-x fs-1 mb-3 text-secondary"></i>
+        <h5>Nenhum lançamento contábil registrado no período selecionado.</h5>
+        <p class="small">Efetue conciliações ou baixas no contas a pagar/receber para gerar partidas dobradas.</p>
+    </div>
+    {% else %}
+        {% for codigo, dados in razao_dados.items() %}
+        <div class="card dv-card p-4 mb-4">
+            <div class="border-bottom border-secondary pb-2 mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold text-white mb-0" style="font-family: 'Rubik', sans-serif;">
+                        <span class="text-accent" style="font-family: monospace;">{{ codigo }}</span> - {{ dados.nome }}
+                    </h5>
+                    <span class="text-muted small">Natureza da conta: <strong>{{ dados.natureza }}</strong></span>
+                </div>
+                <div class="text-end">
+                    <span class="text-muted small d-block">Saldo de Fechamento</span>
+                    <h4 class="fw-bold m-0 {% if dados.saldo_final > 0 %}text-success{% elif dados.saldo_final < 0 %}text-danger{% else %}text-white{% endif %}" style="font-family: monospace;">
+                        {{ dados.saldo_final | real }}
+                    </h4>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                    <thead>
+                        <tr class="text-muted small" style="border-bottom-width: 2px;">
+                            <th style="width: 120px;">Data</th>
+                            <th>Histórico / Descrição</th>
+                            <th style="width: 100px; text-align: center;">Tipo</th>
+                            <th class="text-end" style="width: 150px;">Valor</th>
+                            <th class="text-end" style="width: 180px;">Saldo Acumulado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in dados.lancamentos %}
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                            <td style="font-family: monospace;" data-sort="{{ l.data }}">{{ l.data | formata_data }}</td>
+                            <td>{{ l.descricao }}</td>
+                            <td class="text-center">
+                                <span class="badge {% if l.tipo_mov == 'D' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}" style="font-size: 0.75rem; padding: 4px 10px;">
+                                    {{ 'DÉBITO (D)' if l.tipo_mov == 'D' else 'CRÉDITO (C)' }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold" style="font-family: monospace;">
+                                {{ l.valor | real }}
+                            </td>
+                            <td class="text-end fw-bold {% if l.saldo > 0 %}text-success{% elif l.saldo < 0 %}text-danger{% else %}text-white{% endif %}" style="font-family: monospace;">
+                                {{ l.saldo | real }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

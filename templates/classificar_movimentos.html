@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho Limpo -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-shuffle text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Conciliação Bancária - Classificar Movimentos</h2>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Painel de Métricas do Extrato (Cards de KPI na horizontal) -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Total Valor Pendente -->
+        <div class="col-md-6">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Total Valor Pendente</span>
+                    <i class="bi bi-cash text-danger"></i>
+                </div>
+                <div class="dv-kpi-value text-danger">
+                    {{ total_valor | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Saldo acumulado das transações pendentes</div>
+            </div>
+        </div>
+
+        <!-- Card 2: Itens Aguardando -->
+        <div class="col-md-6">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Itens Aguardando</span>
+                    <i class="bi bi-hourglass-split text-warning"></i>
+                </div>
+                <div class="dv-kpi-value text-warning">
+                    {{ total_itens }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Movimentações aguardando classificação</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Lista de Classificação -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Fila de Conciliação Automática</h5>
+            <p class="text-muted small mb-0">Movimentações importadas do extrato que necessitam de amarração com parceiros e plano de contas</p>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th style="width: 120px;">Data</th>
+                        <th>Descrição do Extrato (MEMO)</th>
+                        <th class="text-end" style="width: 120px;">Valor</th>
+                        <th>Classificação Contábil & Regras</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in movimentos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td data-sort="{{ m.data }}"><code class="text-white">{{ m.data | formata_data }}</code></td>
+                        <td>
+                            <strong>{{ m.descricao_original }}</strong><br>
+                            <span class="text-muted" style="font-size: 0.75rem;">Origem: {{ m.id_arquivo }}</span>
+                        </td>
+                        <td class="text-end fw-bold {% if m.valor >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ m.valor | real }}
+                        </td>
+                        <td style="padding: 15px;">
+                            {% if m.sugestao %}
+                                <!-- Caso 1: Match de Regex Encontrado -->
+                                <form action="{{ url_for('movimentos_conciliar') }}" method="POST">
+                                    <input type="hidden" name="movimento_id" value="{{ m._id }}">
+                                    <input type="hidden" name="participante_id" value="{{ m.sugestao.participante_id }}">
+                                    <input type="hidden" name="conta_codigo" value="{{ m.sugestao.conta_codigo }}">
+                                    <input type="hidden" name="criar_regra" value="false">
+                                    
+                                    <div class="p-3 mb-2 rounded" style="background: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.2); display: flex; flex-direction: column; gap: 4px;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge bg-teal text-dark" style="font-size: 0.65rem; background-color: var(--accent);">Sugestão por RegEx</span>
+                                        </div>
+                                        <span class="text-white fw-bold" style="font-size: 0.85rem;">Parceiro: {{ m.sugestao.participante_nome }}</span>
+                                        <span class="text-muted" style="font-size: 0.8rem;">Conta: {{ m.sugestao.conta_codigo }} - {{ m.sugestao.conta_nome }}</span>
+                                    </div>
+
+                                    <div class="form-group mb-2">
+                                        <label class="form-label small fw-bold text-muted" style="font-size: 0.75rem;">Centro de Custo</label>
+                                        <select name="centro_custo" class="form-select form-select-sm" style="border-radius: 8px;">
+                                            <option value="Geral">Geral</option>
+                                            {% for cc in centros_custo %}
+                                            {% if cc.nome != "Geral" %}
+                                            <option value="{{ cc.nome }}">{{ cc.nome }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-sm btn-success w-100" style="border-radius: 8px; font-weight: 600;">
+                                        Conciliar Automaticamente
+                                    </button>
+                                </form>
+                            {% else %}
+                                <!-- Caso 2: Sem Regra / Classificação Manual -->
+                                <form action="{{ url_for('movimentos_conciliar') }}" method="POST">
+                                    <input type="hidden" name="movimento_id" value="{{ m._id }}">
+                                    
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-sm-6">
+                                            <div class="form-group">
+                                                <label class="form-label small fw-bold text-muted" style="font-size: 0.75rem;">
+                                                    {% if m.valor < 0 %}Fornecedor{% else %}Cliente{% endif %}
+                                                </label>
+                                                <select name="participante_id" class="form-select form-select-sm" style="border-radius: 8px;" required>
+                                                    <option value="">Selecione...</option>
+                                                    {% if m.valor < 0 %}
+                                                        {% for f in fornecedores %}
+                                                        <option value="{{ f._id }}">{{ f.nome_razao }}</option>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        {% for c in clientes %}
+                                                        <option value="{{ c._id }}">{{ c.nome_razao }}</option>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-sm-6">
+                                            <div class="form-group">
+                                                <label class="form-label small fw-bold text-muted" style="font-size: 0.75rem;">Conta Sugerida</label>
+                                                <select name="conta_codigo" class="form-select form-select-sm" style="border-radius: 8px;" required>
+                                                    <option value="">Selecione...</option>
+                                                    {% if m.valor < 0 %}
+                                                        {% for d in contas_despesa %}
+                                                        <option value="{{ d.codigo }}">{{ d.codigo }} - {{ d.nome }}</option>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        {% for r in contas_receita %}
+                                                        <option value="{{ r.codigo }}">{{ r.codigo }} - {{ r.nome }}</option>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group mb-2">
+                                        <label class="form-label small fw-bold text-muted" style="font-size: 0.75rem;">Centro de Custo</label>
+                                        <select name="centro_custo" class="form-select form-select-sm" style="border-radius: 8px;">
+                                            <option value="Geral">Geral</option>
+                                            {% for cc in centros_custo %}
+                                            {% if cc.nome != "Geral" %}
+                                            <option value="{{ cc.nome }}">{{ cc.nome }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <!-- Caixa para Criar Regra de Regex Rápida -->
+                                    <div class="mb-2">
+                                        <div class="form-check">
+                                            <input type="checkbox" id="regra-chk-{{ m._id }}" name="criar_regra" value="true" class="form-check-input" onchange="document.getElementById('pattern-group-{{ m._id }}').style.display = this.checked ? 'block' : 'none'">
+                                            <label class="form-check-label text-muted small" style="cursor: pointer;" for="regra-chk-{{ m._id }}">
+                                                Criar regra de automação para este padrão
+                                            </label>
+                                        </div>
+                                        
+                                        <div id="pattern-group-{{ m._id }}" class="form-group mt-2 animate-fade-in" style="display: none;">
+                                            <label class="form-label small fw-bold text-accent" style="font-size: 0.7rem;">Pattern RegEx Sugerido</label>
+                                            <input type="text" name="regra_pattern" class="form-control form-control-sm" value="{{ m.descricao_original }}" style="border-radius: 8px;">
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-sm btn-primary w-100" style="border-radius: 8px; font-weight: 600;">
+                                        Conciliar Lançamento
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Nenhum movimento pendente de conciliação. Excelente! Seu extrato está em dia.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,726 @@
+/* ==========================================================================
+   FLOW EMPRESAS - INTRANET BLUE3 PREMIUM DESIGN SYSTEM
+   ========================================================================== */
+
+/* Variáveis de Cores (Esquema Dark-Blue / Dark-Only) */
+:root {
+    --bg-main: #0b0f19; /* Fundo da aplicação (Dark) */
+    --bg-mesh: radial-gradient(at 0% 0%, hsla(220, 40%, 6%, 1) 0, transparent 60%),
+                radial-gradient(at 50% 0%, hsla(217, 70%, 12%, 0.45) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(220, 90%, 15%, 0.15) 0, transparent 40%);
+    
+    --bg-sidebar: #06080b;
+    --bg-card: #151c2c; /* Fundo de todos os cards, tabela e painéis (Dark) */
+    --card-bg: var(--bg-card);
+    --border-color: rgba(255, 255, 255, 0.08); /* Divisórias e bordas de inputs/tabelas (Dark) */
+    --card-border: var(--border-color);
+    --card-border-focus: rgba(37, 99, 235, 0.45);
+    --card-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
+    
+    --primary: hsl(217, 90%, 58%); /* Royal Blue3 */
+    --primary-hover: hsl(217, 90%, 63%);
+    --primary-glow: rgba(37, 99, 235, 0.3);
+    
+    --accent: hsl(175, 100%, 43%); /* Blue3 Teal */
+    
+    --text-main: #ffffff; /* Texto principal (Dark) */
+    --text-muted: #9ca3af; /* Subtextos secundários (Dark) */
+    --text-table-header: #ffffff;
+    --text-dark: #06080b;
+    
+    --success: hsl(145, 80%, 42%);
+    --error: hsl(355, 85%, 58%);
+    --warning: hsl(38, 95%, 52%);
+    
+    --input-bg: #1f2937; /* Fundo dos campos do formulário (Dark) */
+    
+    --font-heading: 'Rubik', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    
+    --transition-smooth: all 0.25s linear;
+    
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 75px;
+}
+
+/* Modo Claro Override */
+body.light-mode {
+    --bg-main: #f4f6f9; /* Fundo da aplicação (Light) */
+    --bg-mesh: radial-gradient(at 0% 0%, hsla(210, 40%, 90%, 0.8) 0, transparent 60%),
+                radial-gradient(at 50% 0%, hsla(217, 89%, 95%, 0.1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(175, 100%, 92%, 0.05) 0, transparent 40%);
+    
+    --bg-sidebar: #0b111e; /* Mantém a sidebar escura para manter o contraste do portal Blue3 */
+    --bg-card: #ffffff; /* Fundo de todos os cards, tabela e painéis (Light) */
+    --card-bg: var(--bg-card);
+    --border-color: rgba(0, 0, 0, 0.08); /* Divisórias e bordas de inputs/tabelas (Light) */
+    --card-border: var(--border-color);
+    --card-border-focus: rgba(37, 99, 235, 0.5);
+    --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    
+    --text-main: #1e293b; /* Texto principal (Light) */
+    --text-muted: #64748b; /* Subtextos secundários (Light) */
+    --text-table-header: #334155;
+    --text-dark: #f8fafc;
+    
+    --input-bg: #ffffff; /* Fundo dos campos do formulário (Light) */
+}
+
+/* Reset de Estilos */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-main);
+    background-image: var(--bg-mesh);
+    background-attachment: fixed;
+    color: var(--text-main);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.5;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+body.light-mode ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+/* Prevenção de Piscadas na Renderização da Sidebar Colapsada */
+html.sidebar-collapsed-init body {
+    --sidebar-width: var(--sidebar-collapsed-width);
+}
+html.sidebar-collapsed-init .sidebar-wrapper {
+    width: var(--sidebar-collapsed-width);
+}
+html.sidebar-collapsed-init .brand-text,
+html.sidebar-collapsed-init .nav-label,
+html.sidebar-collapsed-init .nav-group-header,
+html.sidebar-collapsed-init .badge-soon,
+html.sidebar-collapsed-init .badge {
+    display: none !important;
+}
+
+/* ==========================================================================
+   ESTRUTURA DE LAYOUT (page-wrapper, compact-wrapper, page-body-wrapper)
+   ========================================================================== */
+
+.page-wrapper.compact-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.page-body-wrapper {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    position: relative;
+}
+
+/* Barra Lateral (.sidebar-wrapper) */
+.sidebar-wrapper {
+    width: var(--sidebar-width);
+    height: calc(100vh - 90px);
+    position: fixed;
+    top: 90px;
+    left: 1.5rem;
+    z-index: 1000;
+    transition: var(--transition-smooth);
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.sidebar-main-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 2rem;
+}
+
+.sidebar-main-container::-webkit-scrollbar {
+    width: 3px;
+}
+
+/* Corpo Principal (.page-body) */
+.page-body {
+    margin-left: calc(var(--sidebar-width) + 2rem);
+    width: calc(100% - var(--sidebar-width) - 3rem);
+    transition: var(--transition-smooth);
+    min-height: calc(100vh - 120px);
+    padding-bottom: 2rem;
+}
+
+/* Alternância de Colapso da Sidebar */
+body.sidebar-collapsed .sidebar-wrapper {
+    width: var(--sidebar-collapsed-width);
+}
+
+body.sidebar-collapsed .page-body {
+    margin-left: calc(var(--sidebar-collapsed-width) + 2rem);
+    width: calc(100% - var(--sidebar-collapsed-width) - 3rem);
+}
+
+/* Ocultação de elementos colapsados */
+body.sidebar-collapsed .brand-text,
+body.sidebar-collapsed .nav-label,
+body.sidebar-collapsed .nav-group-header,
+body.sidebar-collapsed .badge-soon,
+body.sidebar-collapsed .badge {
+    display: none !important;
+}
+
+body.sidebar-collapsed .logo-wrapper {
+    justify-content: center !important;
+}
+
+body.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding: 0.6rem 0;
+}
+
+body.sidebar-collapsed .sidebar-link i {
+    font-size: 1.25rem;
+    margin-right: 0 !important;
+}
+
+/* Glassmorphism Geral */
+.glass {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+}
+
+/* ==========================================================================
+   CABEÇALHO GERAL (.page-header)
+   ========================================================================== */
+
+.page-header {
+    border-radius: 16px;
+    height: 70px;
+    margin: 1rem 1.5rem 0.5rem 1.5rem;
+}
+
+.tenant-badge-pill {
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 20px;
+    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tenant-pill-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-main);
+    font-family: var(--font-heading);
+}
+
+.pulse-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(0, 210, 196, 0.6);
+    animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(0, 210, 196, 0.6);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 8px rgba(0, 210, 196, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(0, 210, 196, 0);
+    }
+}
+
+.theme-toggle-btn-top {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.theme-toggle-btn-top:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--primary);
+}
+
+body.light-mode .theme-toggle-btn-top {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .theme-toggle-btn-top i {
+    color: var(--text-main) !important;
+}
+
+.btn-renew-session-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition-smooth);
+}
+
+.btn-renew-session-link:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   LINKS DA SIDEBAR (.sidebar-links, .sidebar-link)
+   ========================================================================== */
+
+.nav-group-header {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: 0.35;
+    font-family: var(--font-heading);
+}
+
+.sidebar-links .sidebar-link {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.65) !important;
+    border-radius: 8px;
+    margin: 2px 8px;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.sidebar-links .sidebar-link:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff !important;
+}
+
+.sidebar-links .sidebar-link.active {
+    background: var(--primary);
+    color: #fff !important;
+    box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+/* Opacidade e Eventos para Classes Inativas */
+.disabled, .sidebar-link.disabled {
+    opacity: 0.4 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    background: transparent !important;
+}
+
+.badge-soon {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.45);
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-left: auto;
+}
+
+/* ==========================================================================
+   BLUE3 DV-KPI & CARDS ESTRUTURADOS (.dv-kpi, .dv-kpi-value, .dv-card)
+   ========================================================================== */
+
+.dv-kpi {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    border-radius: 16px;
+    transition: var(--transition-smooth);
+    min-height: 110px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.dv-kpi:hover {
+    transform: translateY(-2px);
+    border-color: var(--card-border-focus);
+}
+
+.dv-kpi-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    letter-spacing: -0.5px;
+    margin-top: 4px;
+}
+
+.dv-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* ==========================================================================
+   INPUTS, FORM CONTROLS E COMPONENTES GERAIS
+   ========================================================================== */
+
+.form-input, .form-select, .form-control {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    transition: var(--transition-smooth);
+}
+
+.form-input:focus, .form-select:focus, .form-control:focus {
+    border-color: var(--primary) !important;
+    background-color: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 0 0 3px var(--primary-glow) !important;
+}
+
+/* Drag and Drop File Upload Zone */
+.file-upload-wrapper {
+    border: 2px dashed var(--card-border);
+    background: rgba(255, 255, 255, 0.02);
+    padding: 35px 20px;
+    border-radius: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.file-upload-wrapper:hover {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.05);
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+/* Centralized Login Wrapper */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 20px;
+}
+
+.login-wrapper {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+}
+
+.login-card {
+    border-radius: 20px;
+    padding: 40px 30px;
+    transition: var(--transition-smooth);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.logo-text {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 2.2rem;
+    letter-spacing: -1px;
+}
+
+.accent-text {
+    color: var(--accent);
+}
+
+.login-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   CLASSES ESPECÍFICAS PARA CONCILIAÇÃO & RELATÓRIOS
+   ========================================================================== */
+
+.sidebar-chart-accounts-list::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-chart-accounts-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+}
+
+/* Ocultação de sub-menus legados duplicados para evitar conflito com o menu Blue3 */
+.page-body .dashboard-header {
+    margin-bottom: 20px;
+    border-radius: 12px;
+    padding: 15px 20px;
+}
+
+.page-body .header-nav {
+    display: none !important;
+}
+
+/* ==========================================================================
+   RESPONSIVIDADE MÓVEL
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .sidebar-wrapper {
+        left: -100%;
+        top: 90px;
+        height: calc(100vh - 110px);
+    }
+    
+    .sidebar-wrapper.mobile-visible {
+        left: 1rem;
+        width: var(--sidebar-width) !important;
+    }
+    
+    .sidebar-wrapper.mobile-visible .brand-text,
+    .sidebar-wrapper.mobile-visible .nav-label,
+    .sidebar-wrapper.mobile-visible .nav-group-header,
+    .sidebar-wrapper.mobile-visible .badge-soon,
+    .sidebar-wrapper.mobile-visible .badge {
+        display: inline-block !important;
+    }
+    
+    .sidebar-wrapper.mobile-visible .nav-group-header {
+        display: block !important;
+    }
+    
+    .page-body {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 0 1rem 1rem 1rem;
+    }
+}
+
+/* ==========================================================================
+   ANIMAÇÕES DE ENTRADA
+   ========================================================================== */
+
+.animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   CLASSES ADICIONADAS PARA RELATÓRIOS E HIERARQUIA CONTÁBIL (DRE/DFC)
+   ========================================================================== */
+
+.dre-row-sintetica {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+    font-weight: 700 !important;
+}
+
+body.light-mode .dre-row-sintetica {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Recuos de Indentação Contábil baseados em níveis */
+.indent-1, .dre-account-indent-1 { padding-left: 0.75rem !important; }
+.indent-2, .dre-account-indent-2 { padding-left: 1.75rem !important; }
+.indent-3, .dre-account-indent-3 { padding-left: 2.75rem !important; }
+.indent-4, .dre-account-indent-4 { padding-left: 3.75rem !important; }
+.indent-5, .dre-account-indent-5 { padding-left: 4.75rem !important; }
+
+/* DFC Headers */
+.dfc-group-header {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    font-weight: 700 !important;
+    font-family: var(--font-heading);
+    color: var(--accent) !important;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    padding: 10px 15px !important;
+}
+
+body.light-mode .dfc-group-header {
+    background-color: rgba(0, 0, 0, 0.03) !important;
+    color: var(--primary) !important;
+}
+
+/* ==========================================================================
+   SUPORTE A TEMAS E CORREÇÃO DE CONTRASTE (SEMÂNTICO E DINÂMICO)
+   ========================================================================== */
+
+/* Cards e Painéis */
+.dv-card, .dv-kpi, .card {
+    background-color: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* Tabelas e Linhas */
+table, .table {
+    background-color: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+.table tr, .table td {
+    background-color: transparent !important;
+    color: var(--text-main) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Forçar transparência nas linhas do body da tabela */
+.table tbody tr,
+.table tbody td {
+    background-color: transparent !important;
+}
+
+/* Cabeçalhos th */
+.table thead th, th {
+    background-color: var(--bg-card) !important;
+    color: var(--text-table-header) !important;
+    font-weight: 600 !important;
+    border-bottom: 2px solid var(--border-color) !important;
+}
+
+/* Títulos globais e cabeçalhos */
+.dashboard-content h2,
+.card-title,
+.modal-title,
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-main) !important;
+}
+
+/* Rótulos e labels */
+.form-label, label {
+    color: var(--text-muted) !important;
+}
+
+body.light-mode .form-label,
+body.light-mode label {
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
+}
+
+/* Subtextos específicos de tabelas (ex: IE: Isento) e textos secundários */
+.text-muted, 
+.text-secondary {
+    color: var(--text-muted) !important;
+}
+
+/* Neutralizar classes text-white em tabelas, cards e modais no modo claro */
+body.light-mode table.text-white,
+body.light-mode .table .text-white,
+body.light-mode .table td,
+body.light-mode .table th,
+body.light-mode .table tr,
+body.light-mode .card .text-white,
+body.light-mode .modal-content .text-white {
+    color: var(--text-main) !important;
+}
+
+/* Elementos de Código e Monospace */
+code, .font-monospace {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color);
+}
+body.light-mode code,
+body.light-mode .font-monospace {
+    color: #0f172a !important; /* Slate 900 */
+}
+
+/* Badges de Tipo com contraste aprimorado sobre fundos pastéis */
+body.light-mode .badge.bg-success-subtle {
+    background-color: rgba(22, 101, 52, 0.1) !important;
+    color: #166534 !important;
+    border: 1px solid rgba(22, 101, 52, 0.25) !important;
+}
+
+body.light-mode .badge.bg-danger-subtle {
+    background-color: rgba(153, 27, 27, 0.1) !important;
+    color: #991b1b !important;
+    border: 1px solid rgba(153, 27, 27, 0.25) !important;
+}
+
+body.light-mode .badge.bg-primary-subtle {
+    background-color: rgba(30, 58, 138, 0.1) !important;
+    color: #1e3a8a !important;
+    border: 1px solid rgba(30, 58, 138, 0.25) !important;
+}
+
+body.light-mode .badge.bg-warning-subtle {
+    background-color: rgba(146, 64, 14, 0.1) !important;
+    color: #92400e !important;
+    border: 1px solid rgba(146, 64, 14, 0.25) !important;
+}

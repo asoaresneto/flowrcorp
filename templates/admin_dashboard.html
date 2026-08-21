@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-shield-lock-fill text-primary fs-4"></i>
+            <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Gestão Comercial e Auditoria Técnica Master</h2>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" style="font-size: 0.85rem;">
+            <i class="bi bi-cpu-fill me-1"></i>Painel Central de Bilhetagem SaaS
+        </span>
+    </div>
+
+    <!-- Grid de KPIs (4 colunas) -->
+    <div class="row g-3 mb-4">
+        <!-- KPI 1: Faturamento Mensal Recorrente (MRR) -->
+        <div class="col-md-3">
+            <div class="card dv-kpi p-3 h-100 shadow-sm" style="border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">MRR Estimado</span>
+                    <i class="bi bi-cash-stack text-success fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-success fw-bold" style="font-size: 1.8rem; font-family: 'Rubik', sans-serif;">
+                    {{ total_mrr | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Soma dos Contratos Ativos</div>
+            </div>
+        </div>
+
+        <!-- KPI 2: Grupos Econômicos Ativos -->
+        <div class="col-md-3">
+            <div class="card dv-kpi p-3 h-100 shadow-sm" style="border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Grupos Ativos</span>
+                    <i class="bi bi-people-fill text-primary fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-primary fw-bold" style="font-size: 1.8rem; font-family: 'Rubik', sans-serif;">
+                    {{ ativos_count }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Grupos Ativos na Plataforma</div>
+            </div>
+        </div>
+
+        <!-- KPI 3: Total de Usuários Ativos -->
+        <div class="col-md-3">
+            <div class="card dv-kpi p-3 h-100 shadow-sm" style="border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Total de Usuários</span>
+                    <i class="bi bi-person-badge-fill text-warning fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-warning fw-bold" style="font-size: 1.8rem; font-family: 'Rubik', sans-serif;">
+                    {{ total_users_plataforma }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Usuários Contabilizados</div>
+            </div>
+        </div>
+
+        <!-- KPI 4: Consumo Total de Armazenamento -->
+        <div class="col-md-3">
+            <div class="card dv-kpi p-3 h-100 shadow-sm" style="border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Espaço em Disco</span>
+                    <i class="bi bi-hdd-network-fill text-accent fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-accent fw-bold" style="font-size: 1.8rem; font-family: 'Rubik', sans-serif;">
+                    {{ total_disk_str }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">Consumo dos Bancos de Dados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela Geral de Controle de Assinaturas -->
+    <div class="card dv-card p-4 shadow-lg" style="border-radius: 14px; background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.06); backdrop-filter: blur(10px);">
+        <div class="border-bottom border-secondary pb-3 mb-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Relatório Analítico de Grupos Econômicos</h5>
+                <p class="text-muted small mb-0">Controle operacional e limites de bilhetagem atualizados em tempo real.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small text-uppercase" style="border-bottom-width: 2px; font-size: 0.75rem; letter-spacing: 0.5px;">
+                        <th>Grupo Econômico / Banco</th>
+                        <th class="text-center">CNPJs / Limite</th>
+                        <th class="text-center">Usuários / Limite</th>
+                        <th class="text-center">Lançamentos Totais</th>
+                        <th class="text-center">Tamanho (dataSize)</th>
+                        <th class="text-center">Data Limite / Acesso</th>
+                        <th class="text-end">Mensalidade</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end" style="width: 280px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in grupos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background-color 0.2s;">
+                        <td>
+                            <div class="fw-bold text-white"><i class="bi bi-box-fill me-2 text-primary"></i>{{ g.nome_grupo }}</div>
+                            <div class="text-muted small" style="font-family: monospace; font-size: 0.75rem; padding-left: 24px;">{{ g.db_name }}</div>
+                        </td>
+                        
+                        <!-- CNPJs Limite -->
+                        <td class="text-center">
+                            <span class="badge {% if g.cnpjs_utilizados > g.max_cnpjs %}bg-danger{% else %}bg-dark text-muted{% endif %}" style="border: 1px solid rgba(255,255,255,0.05);">
+                                {{ g.cnpjs_utilizados }} / {{ g.max_cnpjs }}
+                            </span>
+                        </td>
+                        
+                        <!-- Usuários Limite -->
+                        <td class="text-center">
+                            <span class="badge {% if g.usuarios_utilizados > g.max_usuarios %}bg-danger{% else %}bg-dark text-muted{% endif %}" style="border: 1px solid rgba(255,255,255,0.05);">
+                                {{ g.usuarios_utilizados }} / {{ g.max_usuarios }}
+                            </span>
+                        </td>
+                        
+                        <!-- Lançamentos Totais -->
+                        <td class="text-center">
+                            <span class="badge bg-dark text-white fw-bold" style="border: 1px solid rgba(255,255,255,0.05); font-family: monospace;">
+                                {{ g.total_lancamentos }}
+                            </span>
+                        </td>
+
+                        <!-- Tamanho Banco (MB) -->
+                        <td class="text-center">
+                            <span class="text-muted" style="font-family: monospace; font-size: 0.85rem;">
+                                {{ g.data_size_mb }} MB
+                            </span>
+                        </td>
+
+                        <!-- Data Limite de Acesso -->
+                        <td class="text-center">
+                            {% if g.alerta_limite == 'expirado' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.75rem;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Expirado em {{ g.data_limite_acesso_br }}
+                            </span>
+                            {% elif g.alerta_limite == 'proximo' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 0.75rem;">
+                                <i class="bi bi-clock-fill me-1"></i>Expira em {{ g.data_limite_acesso_br }} ({{ g.dias_restantes }}d)
+                            </span>
+                            {% else %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.75rem;">
+                                <i class="bi bi-calendar-check me-1"></i>Ativo até {{ g.data_limite_acesso_br or 'Ilimitado' }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Mensalidade -->
+                        <td class="text-end fw-bold text-success" style="font-family: monospace;">
+                            {{ g.valor_mensalidade | real }}
+                        </td>
+                        
+                        <!-- Status -->
+                        <td class="text-center">
+                            <span class="badge {% if g.status == 'Ativo' %}bg-success-subtle text-success{% elif g.status == 'Trial' %}bg-info-subtle text-info{% elif g.status == 'Suspenso' %}bg-warning-subtle text-warning{% else %}bg-danger-subtle text-danger{% endif %}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                {{ g.status }}
+                            </span>
+                        </td>
+                        
+                        <!-- Ações -->
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1">
+                                <button class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1" onclick="abrirModalEditarPlano('{{ g.id }}', '{{ g.nome_grupo }}', '{{ g.max_cnpjs }}', '{{ g.max_usuarios }}', '{{ g.valor_mensalidade | num_br }}', '{{ g.data_vencimento }}', '{{ g.status }}', {{ 'true' if g.flag_bpo else 'false' }}, '{{ g.data_limite_acesso }}')" style="border-radius: 8px; font-weight: 600; font-size: 0.75rem;">
+                                    <i class="bi bi-pencil-square"></i> Plano
+                                </button>
+                                <button class="btn btn-sm btn-outline-info d-inline-flex align-items-center gap-1" onclick="abrirModalDetalhes({{ loop.index0 }})" style="border-radius: 8px; font-weight: 600; font-size: 0.75rem;">
+                                    <i class="bi bi-eye"></i> Detalhes
+                                </button>
+                                {% if g.flag_bpo %}
+                                <a href="{{ url_for('admin_bpo_operar', grupo_slug=g.db_name) }}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" style="border-radius: 8px; font-weight: 600; font-size: 0.75rem;">
+                                    <i class="bi bi-sliders"></i> Operar
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-secondary disabled" style="border-radius: 8px; font-weight: 600; font-size: 0.75rem;" disabled>
+                                    <i class="bi bi-slash-circle"></i> Tradicional
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">Nenhum grupo econômico cadastrado no sistema master.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bootstrap: Editar Plano -->
+<div class="modal fade" id="modalEditarPlano" tabindex="-1" aria-labelledby="modalEditarPlanoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white" style="background-color: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; backdrop-filter: blur(15px);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold" id="modalEditarPlanoLabel" style="font-family: 'Rubik', sans-serif;">
+                    <i class="bi bi-pencil-square text-warning me-2"></i>Editar Plano Comercial
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin_grupo_atualizar_completo') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" id="edit_grupo_id" name="grupo_id">
+                    
+                    <div class="form-group mb-3">
+                        <label for="edit_nome_grupo" class="form-label small fw-bold text-muted">Nome do Grupo Econômico</label>
+                        <input type="text" id="edit_nome_grupo" name="nome_grupo" class="form-control text-white" readonly disabled style="border-radius: 10px; background: rgba(255, 255, 255, 0.05); border-color: rgba(255,255,255,0.15);">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="edit_status" class="form-label small fw-bold text-muted">Status</label>
+                        <select id="edit_status" name="status" class="form-select text-white" required style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            <option value="Ativo" style="background-color: var(--bg-card); color: var(--text-main);">Ativo</option>
+                            <option value="Trial" style="background-color: var(--bg-card); color: var(--text-main);">Trial</option>
+                            <option value="Suspenso" style="background-color: var(--bg-card); color: var(--text-main);">Suspenso</option>
+                            <option value="Cancelado" style="background-color: var(--bg-card); color: var(--text-main);">Cancelado</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_max_cnpjs" class="form-label small fw-bold text-muted">Limite de CNPJs / Filiais</label>
+                                <input type="number" id="edit_max_cnpjs" name="max_cnpjs" class="form-control text-white" required min="1" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_max_usuarios" class="form-label small fw-bold text-muted">Limite de Usuários</label>
+                                <input type="number" id="edit_max_usuarios" name="max_usuarios" class="form-control text-white" required min="1" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_valor_mensalidade" class="form-label small fw-bold text-muted">Mensalidade (R$)</label>
+                                <input type="text" id="edit_valor_mensalidade" name="valor_mensalidade" class="form-control mask-money text-white" required placeholder="0,00" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_data_vencimento" class="form-label small fw-bold text-muted">Dia de Vencimento</label>
+                                <input type="text" id="edit_data_vencimento" name="data_vencimento" class="form-control text-white" placeholder="ex: 10" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="edit_data_limite_acesso" class="form-label small fw-bold text-muted">Data Limite de Acesso / Expiração</label>
+                        <input type="date" id="edit_data_limite_acesso" name="data_limite_acesso" class="form-control text-white" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                        <p class="text-muted small mt-1 mb-0" style="font-size: 0.72rem;">Bloqueia o login do Grupo automaticamente após a data definida.</p>
+                    </div>
+
+                    <div class="form-check form-switch mb-2 mt-3">
+                        <input class="form-check-input" type="checkbox" id="edit_flag_bpo" name="flag_bpo" value="true">
+                        <label class="form-check-label small fw-bold text-muted ms-2" for="edit_flag_bpo" style="cursor: pointer;">Habilitar Módulo BPO Financeiro</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 600;">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark" style="border-radius: 10px; font-weight: 600;">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bootstrap: Detalhes de Usuários e Filiais -->
+<div class="modal fade" id="modalDetalhesGrupo" tabindex="-1" aria-labelledby="modalDetalhesGrupoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content text-white" style="background-color: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; backdrop-filter: blur(15px);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold" id="modalDetalhesGrupoLabel" style="font-family: 'Rubik', sans-serif;">
+                    <i class="bi bi-eye text-info me-2"></i>Detalhes do Grupo Econômico: <span id="detalhes_nome_grupo" class="text-primary"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs border-secondary mb-3" id="detailsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active text-white" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="true" style="border-radius: 8px 8px 0 0;">
+                            <i class="bi bi-people-fill me-1"></i>Usuários
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-white" id="filiais-tab" data-bs-toggle="tab" data-bs-target="#filiais" type="button" role="tab" aria-controls="filiais" aria-selected="false" style="border-radius: 8px 8px 0 0;">
+                            <i class="bi bi-building me-1"></i>Filiais / CNPJs
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab content -->
+                <div class="tab-content" id="detailsTabContent">
+                    <!-- Tab: Usuários -->
+                    <div class="tab-pane fade show active" id="users" role="tabpanel" aria-labelledby="users-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle text-white m-0" style="border-color: rgba(255, 255, 255, 0.08);">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th>Nome</th>
+                                        <th>E-mail</th>
+                                        <th>Perfil (Role)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detalhes_usuarios_tbody">
+                                    <!-- Populado via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Filiais -->
+                    <div class="tab-pane fade" id="filiais" role="tabpanel" aria-labelledby="filiais-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle text-white m-0" style="border-color: rgba(255, 255, 255, 0.08);">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th>Razão Social / Filial</th>
+                                        <th>CNPJ / CPF</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detalhes_filiais_tbody">
+                                    <!-- Populado via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 600;">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Lista serializada de dados dos grupos econômicos para renderização local
+const gruposData = {{ grupos | tojson }};
+
+function abrirModalEditarPlano(id, nome, maxCnpjs, maxUsuarios, valor, vencimento, status, bpo, dataLimite) {
+    document.getElementById("edit_grupo_id").value = id;
+    document.getElementById("edit_nome_grupo").value = nome;
+    document.getElementById("edit_status").value = status;
+    document.getElementById("edit_max_cnpjs").value = maxCnpjs;
+    document.getElementById("edit_max_usuarios").value = maxUsuarios;
+    document.getElementById("edit_valor_mensalidade").value = valor;
+    document.getElementById("edit_data_vencimento").value = vencimento;
+    document.getElementById("edit_flag_bpo").checked = bpo;
+    document.getElementById("edit_data_limite_acesso").value = dataLimite || "";
+    
+    const myModal = new bootstrap.Modal(document.getElementById('modalEditarPlano'));
+    myModal.show();
+}
+
+function abrirModalDetalhes(index) {
+    const g = gruposData[index];
+    document.getElementById("detalhes_nome_grupo").innerText = g.nome_grupo;
+    
+    // Popula tabela de usuários
+    const uTbody = document.getElementById("detalhes_usuarios_tbody");
+    uTbody.innerHTML = "";
+    if (g.usuarios_detalhes && g.usuarios_detalhes.length > 0) {
+        g.usuarios_detalhes.forEach(u => {
+            uTbody.innerHTML += `
+                <tr>
+                    <td><strong class="text-white">${u.nome || '-'}</strong></td>
+                    <td style="font-family: monospace;">${u.email || '-'}</td>
+                    <td><span class="badge bg-dark text-muted" style="border: 1px solid rgba(255,255,255,0.05);">${u.role || 'user'}</span></td>
+                </tr>
+            `;
+        });
+    } else {
+        uTbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">Nenhum usuário cadastrado.</td></tr>`;
+    }
+    
+    // Popula tabela de filiais
+    const fTbody = document.getElementById("detalhes_filiais_tbody");
+    fTbody.innerHTML = "";
+    if (g.filiais_detalhes && g.filiais_detalhes.length > 0) {
+        g.filiais_detalhes.forEach(f => {
+            fTbody.innerHTML += `
+                <tr>
+                    <td><strong class="text-white">${f.nome || '-'}</strong></td>
+                    <td style="font-family: monospace;">${f.cnpj || '-'}</td>
+                </tr>
+            `;
+        });
+    } else {
+        fTbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted py-3">Nenhuma filial/CNPJ ativa encontrada.</td></tr>`;
+    }
+    
+    const detailsModal = new bootstrap.Modal(document.getElementById('modalDetalhesGrupo'));
+    detailsModal.show();
+}
+</script>
+{% endblock %}

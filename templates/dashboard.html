@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Alertas de Integridade de Dados se houver furos no OFX -->
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-4 {% if (alertas_integridade_count or 0) == 0 %}d-none{% endif %}" role="alert" style="border-radius: 12px; background-color: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.25); color: var(--warning);">
+        <i class="bi bi-exclamation-triangle-fill fs-5" style="color: var(--warning);"></i>
+        <div>
+            <strong>Atenção Auditoria:</strong> Foram identificados <strong>{{ alertas_integridade_count }}</strong> problemas de integridade na sequência de extratos OFX.
+            <a href="{{ url_for('importacoes_integridade') }}" class="alert-link ms-2 fw-bold text-accent" style="text-decoration: underline;">Visualizar Auditoria</a>
+        </div>
+    </div>
+
+    <!-- 1. Grid de 6 Cards Gerenciais Alinhados (Blue3 dv-kpi) no topo -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Receita Período Atual (Mês atual) -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Receita Período Atual</span>
+                    <i class="bi bi-graph-up text-success"></i>
+                </div>
+                <div class="dv-kpi-value text-success">{{ receitas | real }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Realizado no mês</div>
+            </div>
+        </div>
+
+        <!-- Card 2: CMV (Mês atual) -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">CMV</span>
+                    <i class="bi bi-box-seam text-danger"></i>
+                </div>
+                <div class="dv-kpi-value text-danger">{{ cmv | real }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Custo Mercadorias</div>
+            </div>
+        </div>
+
+        <!-- Card 3: Resultado Bruto -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Resultado Bruto</span>
+                    <i class="bi bi-bar-chart text-success"></i>
+                </div>
+                <div class="dv-kpi-value {% if (resultado_bruto | default(0.0)) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ resultado_bruto | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Receita Bruta - CMV</div>
+            </div>
+        </div>
+
+        <!-- Card 4: Total Custos e Despesas -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Total Custos e Despesas</span>
+                    <i class="bi bi-graph-down text-warning"></i>
+                </div>
+                <div class="dv-kpi-value text-warning">{{ despesas_operacionais | real }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Despesas operacionais</div>
+            </div>
+        </div>
+
+        <!-- Card 5: Receita Líquida -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Receita Líquida</span>
+                    <i class="bi bi-cash-stack text-primary"></i>
+                </div>
+                <div class="dv-kpi-value {% if (receita_liquida | default(0.0)) >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ receita_liquida | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Resultado - Custos</div>
+            </div>
+        </div>
+
+        <!-- Card 6: Margem Líquida (%) -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card dv-kpi h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Margem Líquida (%)</span>
+                    <i class="bi bi-percent text-accent"></i>
+                </div>
+                <div class="dv-kpi-value text-accent">{{ ("%.2f %%" | format(margem_liquida | default(0.0))) | replace('.', ',') }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Margem sobre Receita</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Painel Centralizado do Gráfico e Filtros Integrados -->
+    <div class="card dv-card p-4 mb-4">
+        <!-- Barra de Filtros no topo do painel do gráfico -->
+        <div class="border-bottom border-secondary pb-3 mb-4">
+            <form method="GET" action="{{ url_for('dashboard') }}" class="row g-3 align-items-end">
+                <div class="col-md-3 col-sm-6">
+                    <label for="periodo" class="form-label text-muted small fw-bold">Competência / Período</label>
+                    <input type="month" id="periodo" name="periodo" class="form-control form-input" value="{{ periodo }}" onchange="this.form.submit()">
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label for="cnpj" class="form-label text-muted small fw-bold">Filtrar por CNPJ (Parceiro)</label>
+                    <select id="cnpj" name="cnpj" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Todos os CNPJs</option>
+                        {% for p in participantes_cnpj %}
+                        <option value="{{ p.cnpj_cpf }}" {% if cnpj_filtro == p.cnpj_cpf %}selected{% endif %}>
+                            {{ p.nome_razao }} ({{ p.cnpj_cpf }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label for="centro_custo" class="form-label text-muted small fw-bold">Centro de Custo</label>
+                    <select id="centro_custo" name="centro_custo" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="Geral">Todos os Centros</option>
+                        {% for cc in centros_custo %}
+                        <option value="{{ cc }}" {% if centro_custo_filtro == cc %}selected{% endif %}>
+                            {{ cc }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6 d-flex gap-2">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary w-50 d-flex align-items-center justify-content-center" style="border-radius: 10px; height: 42px; font-weight: 600;">Limpar</a>
+                    <button type="submit" class="btn btn-sm btn-primary w-50 d-flex align-items-center justify-content-center" style="border-radius: 10px; height: 42px; font-weight: 600;">Filtrar</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Área do Gráfico de Evolução e Seletor Lateral Reativo -->
+        <div class="row g-3">
+            <div class="col-lg-9 col-md-8">
+                <h5 class="card-title fw-bold text-white mb-3" style="font-family: 'Rubik', sans-serif;">Evolução Financeira (Últimos 6 Meses)</h5>
+                <div style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 border-start border-secondary ps-md-4">
+                <h5 class="card-title fw-bold text-white mb-2" style="font-family: 'Rubik', sans-serif;">Contas no Gráfico</h5>
+                <p class="text-muted small mb-3">Marque as contas analíticas abaixo para plotar sua evolução mensal</p>
+                <div class="sidebar-chart-accounts-list" style="max-height: 310px; overflow-y: auto; padding-right: 5px;">
+                    {% for c in contas_analiticas %}
+                    <div class="form-check mb-2">
+                        <input type="checkbox" id="chk-{{ c.codigo }}" value="{{ c.codigo }}" data-nome="{{ c.nome }}" class="form-check-input chart-dataset-toggle" onchange="updateChartDatasets()" {% if loop.index <= 3 %}checked{% endif %}>
+                        <label for="chk-{{ c.codigo }}" class="form-check-label text-muted small" style="cursor: pointer;">
+                            <span class="fw-bold text-white" style="font-family: monospace;">{{ c.codigo }}</span> - {{ c.nome }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Tabela de Transações Recentes -->
+    <div class="card dv-card p-4">
+        <div class="card-header border-0 bg-transparent p-0 mb-3">
+            <h5 class="card-title fw-bold text-white m-0" style="font-family: 'Rubik', sans-serif;">Movimentações do Período</h5>
+            <p class="text-muted small m-0">Últimos lançamentos correspondentes aos filtros ativos (regime de caixa)</p>
+        </div>
+        <div class="card-body p-0">
+            {% if conn_error %}
+            <div class="alert alert-danger m-3" role="alert">
+                ⚠️ {{ conn_error }}
+            </div>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                    <thead>
+                        <tr class="text-muted small" style="border-bottom-width: 2px;">
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Parceiro</th>
+                            <th>Conta Contábil</th>
+                            <th>Centro Custo</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in transacoes %}
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                            <td style="font-family: monospace; font-size: 0.85rem;" data-sort="{{ t.data }}">{{ t.data | formata_data }}</td>
+                            <td class="fw-bold">{{ t.descricao }}</td>
+                            <td>{{ t.participante_nome }}</td>
+                            <td>
+                                <span class="badge bg-secondary" style="font-family: monospace;">{{ t.conta_codigo }}</span>
+                                <span class="text-muted small ms-1">{{ t.conta_name or t.conta_nome }}</span>
+                            </td>
+                            <td><span class="badge bg-dark text-muted" style="border: 1px solid rgba(255,255,255,0.05);">{{ t.centro_custo or 'Geral' }}</span></td>
+                            <td>
+                                <span class="badge {% if t.tipo == 'Receita' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                    {{ t.tipo }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold {% if t.tipo == 'Receita' %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace;">
+                                {{ t.valor | real }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">Nenhuma transação contábil encontrada para os filtros aplicados neste período.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const rawChartData = {{ chart_data_json | safe }};
+const chartLabels = {{ meses_lista | safe }};
+let evolutionChart = null;
+
+function updateChartTheme() {
+    if (!evolutionChart) return;
+    const isLight = document.body.classList.contains("light-mode");
+    const gridColor = isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
+    const textColor = isLight ? "#2a2d34" : "#f1f3f9";
+
+    evolutionChart.options.scales.x.grid.color = gridColor;
+    evolutionChart.options.scales.x.ticks.color = textColor;
+    evolutionChart.options.scales.y.grid.color = gridColor;
+    evolutionChart.options.scales.y.ticks.color = textColor;
+    evolutionChart.options.plugins.legend.labels.color = textColor;
+    evolutionChart.update();
+}
+
+window.addEventListener("theme-changed", () => {
+    updateChartTheme();
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
+    evolutionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: { family: 'Inter', size: 11 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { font: { family: 'Inter' } }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { font: { family: 'Inter' } }
+                }
+            }
+        }
+    });
+
+    updateChartDatasets();
+    updateChartTheme();
+});
+
+function updateChartDatasets() {
+    if (!evolutionChart) return;
+    
+    const activeDatasets = [];
+    const colorPalette = [
+        '#6366f1', // Indigo
+        '#14b8a6', // Teal
+        '#10b981', // Green
+        '#f59e0b', // Yellow
+        '#ef4444', // Red
+        '#ec4899', // Pink
+        '#3b82f6', // Blue
+        '#8b5cf6'  // Purple
+    ];
+    
+    const checkboxes = document.querySelectorAll(".chart-dataset-toggle:checked");
+    checkboxes.forEach((cb, idx) => {
+        const code = cb.value;
+        const name = cb.getAttribute("data-nome");
+        const data = rawChartData[code] || [0,0,0,0,0,0];
+        const color = colorPalette[idx % colorPalette.length];
+        
+        activeDatasets.push({
+            label: `${code} - ${name}`,
+            data: data,
+            borderColor: color,
+            backgroundColor: color + '12',
+            borderWidth: 2.5,
+            tension: 0.35,
+            fill: true
+        });
+    });
+    
+    evolutionChart.data.datasets = activeDatasets;
+    evolutionChart.update();
+}
+</script>
+{% endblock %}

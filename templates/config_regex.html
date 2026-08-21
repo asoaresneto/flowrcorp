@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho de Página Limpo -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-regex text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Configurações - Regras de REGEX</h2>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Grid de Conteúdo Responsiva -->
+    <div class="row g-4">
+        <!-- Lado Esquerdo (.col-lg-8): Tabela com as regras existentes -->
+        <div class="col-lg-8">
+            <div class="card dv-card p-4 h-100">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Regras de Associação Automática (REGEX)</h5>
+                    <p class="text-muted small mb-0">Regras que buscam padrões no histórico (MEMO) do OFX e sugerem parceiros e contas contábeis</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                        <thead>
+                            <tr class="text-muted small" style="border-bottom-width: 2px;">
+                                <th>Expressão Regular (Pattern)</th>
+                                <th>Tipo</th>
+                                <th>Parceiro Vinculado</th>
+                                <th>Conta Sugerida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in regras %}
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <td><code class="text-white bg-dark px-2 py-1 rounded" style="font-size: 0.85rem;">{{ r.pattern }}</code></td>
+                                <td>
+                                    <span class="badge {% if r.tipo == 'Receita' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                        {{ r.tipo }}
+                                    </span>
+                                </td>
+                                <td><strong class="text-white">{{ r.participante_nome }}</strong></td>
+                                <td>
+                                    <span class="badge bg-secondary" style="font-family: monospace; font-size: 0.75rem;">{{ r.conta_codigo }}</span><br>
+                                    <span class="text-muted small">{{ r.conta_nome }}</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Nenhuma regra de RegEx cadastrada. Crie uma ao lado para automatizar sua conciliação.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lado Direito (.col-lg-4): Formulário para nova regra -->
+        <div class="col-lg-4">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Nova Regra</h5>
+                    <p class="text-muted small mb-0">Cadastre expressões regulares para automatizar a classificação financeira</p>
+                </div>
+
+                <form action="{{ url_for('config_regex_salvar') }}" method="POST">
+                    <div class="form-group mb-3">
+                        <label for="pattern" class="form-label small fw-bold text-muted">Expressão Regular (Pattern)</label>
+                        <input type="text" id="pattern" name="pattern" class="form-control" placeholder="ex: POSTO.*SANTA.*HELENA ou GOOGLE" required style="border-radius: 10px;">
+                        <span class="text-muted d-block mt-1" style="font-size: 0.75rem;">Insira a sintaxe regex que corresponderá à descrição no extrato.</span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="tipo" class="form-label small fw-bold text-muted">Tipo de Movimento</label>
+                        <select id="tipo" name="tipo" class="form-select" required style="border-radius: 10px;">
+                            <option value="Despesa">Despesa (Débito no extrato)</option>
+                            <option value="Receita">Receita (Crédito no extrato)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="participante_id" class="form-label small fw-bold text-muted">Parceiro Vinculado (Fornecedor/Cliente)</label>
+                        <select id="participante_id" name="participante_id" class="form-select" required style="border-radius: 10px;">
+                            <option value="">Selecione o parceiro...</option>
+                            {% for p in participantes %}
+                            <option value="{{ p._id }}">{{ p.nome_razao }} ({{ p.tipo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="conta_codigo" class="form-label small fw-bold text-muted">Conta Contábil Sugerida</label>
+                        <select id="conta_codigo" name="conta_codigo" class="form-select" required style="border-radius: 10px;">
+                            <option value="">Selecione a conta analítica...</option>
+                            {% for c in contas %}
+                            <option value="{{ c.codigo }}">{{ c.codigo }} - {{ c.nome }} ({{ c.tipo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="reset" class="btn btn-outline-secondary px-4" style="border-radius: 10px; font-weight: 600;">Limpar</button>
+                        <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px; font-weight: 600;">Salvar Regra</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

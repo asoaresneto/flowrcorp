@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Empresas - Intranet Blue3 Portal</title>
+    
+    <!-- Google Fonts: Rubik e Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- CSS Estilizado Principal -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <script>
+        (function() {
+            const collapsed = localStorage.getItem("sidebar-collapsed");
+            if (collapsed === "true") {
+                document.documentElement.classList.add("sidebar-collapsed-init");
+            }
+            const savedTheme = localStorage.getItem("theme") || "dark";
+            if (savedTheme === "light") {
+                document.documentElement.classList.add("light-mode-init");
+            }
+        })();
+    </script>
+</head>
+<body>
+
+    {% if session.get('impersonator_user_id') %}
+    <div class="alert alert-warning text-center m-0 py-2 border-0 rounded-0 d-flex align-items-center justify-content-center gap-2" style="position: sticky; top: 0; z-index: 9999; font-weight: 600; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background-color: var(--warning); color: #000;">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <span>MODO IMPERSONATION ATIVO: Você está operando como o Grupo Econômico <strong>{{ session.get('grupo_nome') }}</strong>.</span>
+        <a href="{{ url_for('admin_bpo_sair') }}" class="btn btn-sm btn-dark ms-3 fw-bold d-inline-flex align-items-center gap-1" style="border-radius: 8px; font-size: 0.8rem; padding: 4px 12px; color: #fff;">
+            <i class="bi bi-box-arrow-right"></i> Voltar ao Painel Admin
+        </a>
+    </div>
+    {% endif %}
+
+    {% if session.get('user_id') %}
+    <!-- Estrutura Mestre Blue3 Intranet (.page-wrapper.compact-wrapper) -->
+    <div class="page-wrapper compact-wrapper" id="pageWrapper">
+        
+        <!-- Cabeçalho Principal do Portal (.page-header) -->
+        <header class="page-header d-flex justify-content-between align-items-center py-2 px-3 mb-4 mt-3 glass">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-outline-secondary d-md-none text-white" onclick="toggleSidebarMobile()">
+                    <i class="bi bi-list"></i>
+                </button>
+                {% if session.get('grupo_nome') %}
+                <div class="tenant-badge-pill">
+                    <span class="pulse-indicator"></span>
+                    <span class="tenant-pill-text">{{ session.get('grupo_nome') }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <div class="inactivity-info text-muted d-none d-lg-block" style="font-size: 0.8rem;">
+                    <i class="bi bi-clock-history me-1"></i>Sessão expira em: <strong id="inactivity-countdown" class="text-white">05:00</strong>
+                    <a href="{{ request.path }}" class="btn-renew-session-link ms-2">Renovar</a>
+                </div>
+                
+                <button class="btn-toggle-theme theme-toggle-btn-top" onclick="toggleTheme()" title="Alternar Modo de Cores">
+                    <i id="theme-btn-icon" class="bi bi-moon-fill text-white"></i>
+                </button>
+                
+                <div class="user-profile-header d-none d-sm-block text-end">
+                    <div class="fw-bold text-white small" style="font-size: 0.85rem;">{{ session.get('user_name') }}</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">{{ session.get('user_email') }}</div>
+                </div>
+                
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" style="border-radius: 20px; font-size: 0.75rem; padding: 4px 12px;">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Sair</span>
+                </a>
+            </div>
+        </header>
+        
+        <div class="page-body-wrapper">
+            
+            <!-- Barra Lateral de Navegação (.sidebar-wrapper) -->
+            <div class="sidebar-wrapper shadow-sm" data-sidebar-layout="stroke-svg" id="sidebarWrapper">
+                <div class="logo-wrapper d-flex align-items-center justify-content-between p-3 border-bottom border-secondary">
+                    <span class="fs-5 fw-bold brand-text"><i class="bi bi-cpu text-accent me-2"></i>Flow Empresas</span>
+                    <button class="btn btn-sm btn-outline-secondary d-none d-md-block text-white" onclick="toggleSidebar()" style="border: none;">
+                        <i id="collapse-icon" class="bi bi-chevron-left"></i>
+                    </button>
+                </div>
+                
+                <div class="sidebar-main-container">
+                    <nav class="sidebar-main">
+                        <ul class="sidebar-links list-unstyled">
+                            
+                            <!-- 1. Principal -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-2">Principal</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('dashboard') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                                    <i class="bi bi-grid-1x2-fill me-2"></i>
+                                    <span class="nav-label">Dashboard</span>
+                                </a>
+                            </li>
+                            
+                            <!-- 2. Cadastros -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-3">Cadastros</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('participantes') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'participantes' %}active{% endif %}">
+                                    <i class="bi bi-people-fill me-2"></i>
+                                    <span class="nav-label">Clientes/Fornecedores</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('plano_contas') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'plano_contas' %}active{% endif %}">
+                                    <i class="bi bi-journal-medical me-2"></i>
+                                    <span class="nav-label">Cadastro Contas</span>
+                                </a>
+                            </li>
+                            
+                            <!-- 3. Financeiro -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-3">Financeiro</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('contas_pagar') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'contas_pagar' %}active{% endif %}">
+                                    <i class="bi bi-arrow-down-left-circle-fill me-2"></i>
+                                    <span class="nav-label">Contas a Pagar</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('contas_receber') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'contas_receber' %}active{% endif %}">
+                                    <i class="bi bi-arrow-up-right-circle-fill me-2"></i>
+                                    <span class="nav-label">Contas a Receber</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('financeiro_dre') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'financeiro_dre' %}active{% endif %}">
+                                    <i class="bi bi-calculator-fill me-2"></i>
+                                    <span class="nav-label">DRE</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('financeiro_dre_anual') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'financeiro_dre_anual' %}active{% endif %}">
+                                    <i class="bi bi-calendar-range-fill me-2"></i>
+                                    <span class="nav-label">Evolução Anual do DRE</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('financeiro_dfc') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'financeiro_dfc' %}active{% endif %}">
+                                    <i class="bi bi-bank me-2"></i>
+                                    <span class="nav-label">DFC</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('importar_ofx') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'importar_ofx' %}active{% endif %}">
+                                    <i class="bi bi-file-earmark-arrow-up-fill me-2"></i>
+                                    <span class="nav-label">Importação OFX</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('dashboard') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white">
+                                    <i class="bi bi-clock-history me-2"></i>
+                                    <span class="nav-label">Histórico Lançamentos</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="#" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white disabled">
+                                    <i class="bi bi-flag-fill me-2"></i>
+                                    <span class="nav-label">Metas</span>
+                                    <span class="badge-soon">Breve</span>
+                                </a>
+                            </li>
+                            
+                            <!-- 4. Contábil -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-3">Contábil</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('contabil_lancamentos') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'contabil_lancamentos' %}active{% endif %}">
+                                    <i class="bi bi-pencil-square me-2"></i>
+                                    <span class="nav-label">Lançamentos</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('contabil_razao') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'contabil_razao' %}active{% endif %}">
+                                    <i class="bi bi-journal-text me-2"></i>
+                                    <span class="nav-label">Razão</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('financeiro_dfc') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white">
+                                    <i class="bi bi-safe2-fill me-2"></i>
+                                    <span class="nav-label">Caixa</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('contabil_razonetes') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'contabil_razonetes' %}active{% endif %}">
+                                    <i class="bi bi-layout-split me-2"></i>
+                                    <span class="nav-label">Razonetes</span>
+                                </a>
+                            </li>
+                            
+                            <!-- 5. Importações -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-3">Importações</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('classificar_movimentos') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'classificar_movimentos' %}active{% endif %}">
+                                    <i class="bi bi-shuffle me-2"></i>
+                                    <span class="nav-label">Classificar Movimentos</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('importar_ofx') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'importar_ofx' %}active{% endif %}">
+                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i>
+                                    <span class="nav-label">Importar OFX</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('importacao_universal') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'importacao_universal' %}active{% endif %}">
+                                    <i class="bi bi-file-earmark-spreadsheet-fill me-2"></i>
+                                    <span class="nav-label">Importação Universal</span>
+                                    <span class="badge bg-success ms-2" style="font-size: 0.6rem; padding: 2px 6px; border-radius: 4px;">NOVO</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('plano_contas') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white">
+                                    <i class="bi bi-folder-symlink-fill me-2"></i>
+                                    <span class="nav-label">Importar Plano de Contas</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('importacoes_integridade') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'importacoes_integridade' %}active{% endif %}">
+                                    <i class="bi bi-shield-check me-2"></i>
+                                    <span class="nav-label">Integridade Dados</span>
+                                    {% if integridade_alertas_count > 0 %}
+                                    <span class="badge bg-danger ms-auto" style="font-size: 0.65rem;">{{ integridade_alertas_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            
+                            <!-- 6. Configurações -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-3">Configurações</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('config_regex') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'config_regex' %}active{% endif %}">
+                                    <i class="bi bi-regex me-2"></i>
+                                    <span class="nav-label">REGEX</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('config_contas_correntes') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'config_contas_correntes' %}active{% endif %}">
+                                    <i class="bi bi-wallet2 me-2"></i>
+                                    <span class="nav-label">Contas Correntes</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('plano_contas') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white">
+                                    <i class="bi bi-gear-fill me-2"></i>
+                                    <span class="nav-label">Plano de Contas</span>
+                                    <span class="badge bg-warning text-dark ms-auto" style="font-size: 0.65rem;">CMV</span>
+                                </a>
+                            </li>
+                             <li class="sidebar-list-item">
+                                 <a href="{{ url_for('listar_usuarios') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'listar_usuarios' %}active{% endif %}">
+                                     <i class="bi bi-person-gear me-2"></i>
+                                     <span class="nav-label">Usuários</span>
+                                 </a>
+                             </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('config_filiais') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'config_filiais' %}active{% endif %}">
+                                    <i class="bi bi-building-fill-gear me-2"></i>
+                                    <span class="nav-label">Filiais</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('config_centros_custo') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'config_centros_custo' %}active{% endif %}">
+                                    <i class="bi bi-tags-fill me-2"></i>
+                                    <span class="nav-label">Centros de Custo</span>
+                                </a>
+                            </li>
+                            
+                            {% if session.get('permissao_master') or session.get('impersonator_permissao_master') %}
+                            <!-- 7. Painel Master -->
+                            <li class="nav-group-header text-uppercase text-muted px-3 py-1 mt-3">Painel Master</li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                                    <i class="bi bi-shield-lock-fill me-2 text-primary"></i>
+                                    <span class="nav-label">Assinaturas</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('gestao_master') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'gestao_master' %}active{% endif %}">
+                                    <i class="bi bi-gear-wide-connected me-2 text-primary"></i>
+                                    <span class="nav-label">Gestão de Assinaturas SaaS</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-list-item">
+                                <a href="{{ url_for('admin_bpo_central') }}" class="sidebar-link nav-link d-flex align-items-center px-3 py-2 text-white {% if request.endpoint == 'admin_bpo_central' %}active{% endif %}">
+                                    <i class="bi bi-shield-shaded me-2 text-primary"></i>
+                                    <span class="nav-label">Central BPO</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Conteúdo Principal (.page-body) -->
+            <main class="page-body">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+    <!-- Layout de Autenticação Centralizado -->
+    <div class="login-container">
+        {% block auth_content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <!-- Bootstrap 5 Bundle JS via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script de Monitoramento de Inatividade -->
+    {% if session.get('user_id') %}
+    <script>
+        window.INACTIVITY_TIMEOUT_MINUTES = {{ config.PERMANENT_SESSION_LIFETIME_MINUTES | default(5) }};
+        window.LOGOUT_URL = "{{ url_for('logout', reason='timeout') }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/inactivity.js') }}"></script>
+    {% endif %}
+
+    <script>
+        (function() {
+            const isCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+            if (isCollapsed) {
+                document.body.classList.add("sidebar-collapsed");
+            }
+            const isLight = localStorage.getItem("theme") === "light";
+            if (isLight) {
+                document.body.classList.add("light-mode");
+            }
+        })();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const isCollapsed = document.body.classList.contains("sidebar-collapsed");
+            const collapseIcon = document.getElementById("collapse-icon");
+            if (collapseIcon) {
+                collapseIcon.className = isCollapsed ? "bi bi-chevron-right" : "bi bi-chevron-left";
+            }
+            
+            const isLight = document.body.classList.contains("light-mode");
+            const themeIcon = document.getElementById("theme-btn-icon");
+            if (themeIcon) {
+                themeIcon.className = isLight ? "bi bi-sun-fill" : "bi bi-moon-fill";
+            }
+        });
+
+        function toggleSidebar() {
+            document.body.classList.toggle("sidebar-collapsed");
+            const collapsed = document.body.classList.contains("sidebar-collapsed");
+            localStorage.setItem("sidebar-collapsed", collapsed ? "true" : "false");
+            
+            const collapseIcon = document.getElementById("collapse-icon");
+            if (collapseIcon) {
+                collapseIcon.className = collapsed ? "bi bi-chevron-right" : "bi bi-chevron-left";
+            }
+        }
+
+        function toggleSidebarMobile() {
+            const sidebar = document.getElementById("sidebarWrapper");
+            if (sidebar) {
+                sidebar.classList.toggle("mobile-visible");
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle("light-mode");
+            const isLight = body.classList.contains("light-mode");
+            localStorage.setItem("theme", isLight ? "light" : "dark");
+            
+            const themeIcon = document.getElementById("theme-btn-icon");
+            if (themeIcon) {
+                themeIcon.className = isLight ? "bi bi-sun-fill" : "bi bi-moon-fill";
+            }
+            
+            window.dispatchEvent(new Event("theme-changed"));
+        }
+
+        // Script Global para Máscara Monetária (.mask-money) no formato brasileiro
+        document.addEventListener("DOMContentLoaded", function() {
+            function maskMoney(event) {
+                let input = event.target;
+                let value = input.value.replace(/\D/g, "");
+                if (!value) {
+                    input.value = "";
+                    return;
+                }
+                let floatValue = parseFloat(value) / 100;
+                input.value = floatValue.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            // Monitora eventos em todos os inputs com classe .mask-money
+            document.body.addEventListener("input", function(event) {
+                if (event.target.classList.contains("mask-money")) {
+                    maskMoney(event);
+                }
+            });
+
+            // Formata os valores iniciais na carga da página
+            document.querySelectorAll(".mask-money").forEach(input => {
+                let val = input.value.trim();
+                if (val) {
+                    let cleanVal = val.replace(/\./g, "").replace(",", ".");
+                    let num = parseFloat(cleanVal);
+                    if (!isNaN(num)) {
+                        input.value = num.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

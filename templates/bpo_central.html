@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-shield-shaded text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Central de Operações BPO Financeiro</h2>
+    </div>
+
+    <!-- Seção de Seleção de Cliente BPO -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Clientes BPO Sob Operação Delegada</h5>
+            <p class="text-muted small mb-0">Selecione abaixo o parceiro BPO para assumir temporariamente o controle operacional do seu painel e movimentações.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th>Grupo Econômico</th>
+                        <th>Banco de Dados (Slug)</th>
+                        <th class="text-center">Status de Acesso</th>
+                        <th class="text-end" style="width: 250px;">Ações BPO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in grupos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td class="fw-bold fs-6"><i class="bi bi-building me-2 text-primary"></i>{{ g.nome_grupo }}</td>
+                        <td><span style="font-family: monospace;" class="text-muted">{{ g.db_name }}</span></td>
+                        
+                        <!-- Status -->
+                        <td class="text-center">
+                            <span class="badge {% if g.status == 'Ativo' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                {{ g.status }}
+                            </span>
+                        </td>
+                        
+                        <!-- Ações BPO -->
+                        <td class="text-end">
+                            <a href="{{ url_for('admin_bpo_operar', grupo_slug=g.db_name) }}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2" style="border-radius: 10px; font-weight: 600; padding: 6px 18px;">
+                                <i class="bi bi-shield-shaded"></i> Operar Financeiro
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-folder-x fs-1 mb-3 text-secondary d-block"></i>
+                            <h5>Nenhum grupo econômico habilitado para BPO Financeiro.</h5>
+                            <p class="small text-muted mt-1">Configure 'flag_bpo: true' na assinatura para visualizar clientes de BPO.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

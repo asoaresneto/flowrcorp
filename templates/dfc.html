@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho de Página Limpo & Sub-Navegação -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-bank text-primary fs-4"></i>
+            <div>
+                <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">DFC - Demonstrativo de Fluxo de Caixa</h2>
+                <span class="text-muted small">Período Selecionado: <strong>{{ periodo }}</strong></span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('financeiro_dre') }}" class="btn btn-sm btn-outline-secondary px-3" style="border-radius: 8px; font-weight: 600;">DRE Mensal</a>
+            <a href="{{ url_for('financeiro_dre_anual') }}" class="btn btn-sm btn-outline-secondary px-3" style="border-radius: 8px; font-weight: 600;">DRE Anual</a>
+            <a href="{{ url_for('financeiro_dfc') }}" class="btn btn-sm btn-primary active px-3" style="border-radius: 8px; font-weight: 600;">DFC (Fluxo Caixa)</a>
+        </div>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Barra de Filtros Globais no Topo -->
+    <div class="card dv-card p-4 mb-4">
+        <form method="GET" action="{{ url_for('financeiro_dfc') }}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="periodo" class="form-label small fw-bold text-muted mb-2">Período / Mês</label>
+                <input type="month" id="periodo" name="periodo" class="form-control" value="{{ periodo }}" onchange="this.form.submit()" style="border-radius: 10px;">
+            </div>
+            
+            <div class="col-md-5">
+                <label for="cnpj" class="form-label small fw-bold text-muted mb-2">Filtrar por CNPJ</label>
+                <select id="cnpj" name="cnpj" class="form-select" onchange="this.form.submit()" style="border-radius: 10px;">
+                    <option value="">Todos os CNPJs</option>
+                    {% for p in participantes_cnpj %}
+                    <option value="{{ p.cnpj_cpf }}" {% if cnpj_filtro == p.cnpj_cpf %}selected{% endif %}>
+                        {{ p.nome_razao }} ({{ p.cnpj_cpf }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="centro_custo" class="form-label small fw-bold text-muted mb-2">Centro de Custo</label>
+                <select id="centro_custo" name="centro_custo" class="form-select" onchange="this.form.submit()" style="border-radius: 10px;">
+                    <option value="Geral">Todos os Centros</option>
+                    {% for cc in centros_custo %}
+                    <option value="{{ cc }}" {% if centro_custo_filtro == cc %}selected{% endif %}>
+                        {{ cc }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-1">
+                <a href="{{ url_for('financeiro_dfc', periodo=periodo) }}" class="btn btn-outline-secondary w-100" style="border-radius: 10px;" title="Limpar Filtros"><i class="bi bi-x-circle"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- 3. Resumo dos Fluxos (Saldos KPI na horizontal) -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Fluxo Operacional -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Fluxo Operacional</span>
+                    <i class="bi bi-briefcase text-primary"></i>
+                </div>
+                <div class="dv-kpi-value {% if total_operacional >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ total_operacional | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Atividades Operacionais</div>
+            </div>
+        </div>
+
+        <!-- Card 2: Fluxo de Investimento -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Fluxo de Investimento</span>
+                    <i class="bi bi-building text-info"></i>
+                </div>
+                <div class="dv-kpi-value {% if total_investimento >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ total_investimento | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Atividades de Investimento</div>
+            </div>
+        </div>
+
+        <!-- Card 3: Fluxo de Financiamento -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Fluxo de Financiamento</span>
+                    <i class="bi bi-bank text-warning"></i>
+                </div>
+                <div class="dv-kpi-value {% if total_financiamento >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ total_financiamento | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Atividades de Financiamento</div>
+            </div>
+        </div>
+
+        <!-- Card 4: Geração Líquida Caixa -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card dv-kpi p-3 h-100" style="border-color: var(--accent);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Geração Líquida Caixa</span>
+                    <i class="bi bi-cash-coin text-accent"></i>
+                </div>
+                <div class="dv-kpi-value {% if saldo_liquido >= 0 %}text-accent{% else %}text-danger{% endif %}">
+                    {{ saldo_liquido | real }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Resultado Líquido do Caixa</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Tabela Detalhada do DFC -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Demonstrativo Detalhado de Fluxo de Caixa (Regime de Caixa)</h5>
+            <p class="text-muted small mb-0">Entradas e saídas de caixa efetivas divididas pelas atividades operacionais, de investimento e de financiamento.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th style="width: 120px;">Data</th>
+                        <th>Descrição da Transação</th>
+                        <th>Parceiro</th>
+                        <th>Conta Vinculada</th>
+                        <th class="text-end">Valor Realizado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- ATIVIDADES OPERACIONAIS -->
+                    <tr>
+                        <td colspan="5" class="dfc-group-header">1. Atividades Operacionais</td>
+                    </tr>
+                    {% for item in dfc_operacional %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td data-sort="{{ item.data }}"><code class="text-white">{{ item.data | formata_data }}</code></td>
+                        <td>{{ item.descricao }}</td>
+                        <td><strong>{{ item.participante_nome }}</strong></td>
+                        <td><span class="text-muted small">{{ item.conta_nome }}</span></td>
+                        <td class="text-end fw-bold {% if item.valor >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ item.valor | real }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3" style="font-size: 0.8rem;">Nenhum movimento operacional registrado neste período.</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="background: rgba(255, 255, 255, 0.02); font-weight: 700;">
+                        <td colspan="4" class="text-end pe-3" style="font-size: 0.9rem;">Subtotal Atividades Operacionais:</td>
+                        <td class="text-end {% if total_operacional >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ total_operacional | real }}
+                        </td>
+                    </tr>
+
+                    <!-- ATIVIDADES DE INVESTIMENTO -->
+                    <tr>
+                        <td colspan="5" class="dfc-group-header">2. Atividades de Investimento</td>
+                    </tr>
+                    {% for item in dfc_investimento %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td data-sort="{{ item.data }}"><code class="text-white">{{ item.data | formata_data }}</code></td>
+                        <td>{{ item.descricao }}</td>
+                        <td><strong>{{ item.participante_nome }}</strong></td>
+                        <td><span class="text-muted small">{{ item.conta_nome }}</span></td>
+                        <td class="text-end fw-bold {% if item.valor >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ item.valor | real }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3" style="font-size: 0.8rem;">Nenhum movimento de investimento registrado neste período.</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="background: rgba(255, 255, 255, 0.02); font-weight: 700;">
+                        <td colspan="4" class="text-end pe-3" style="font-size: 0.9rem;">Subtotal Atividades de Investimento:</td>
+                        <td class="text-end {% if total_investimento >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ total_investimento | real }}
+                        </td>
+                    </tr>
+
+                    <!-- ATIVIDADES DE FINANCIAMENTO -->
+                    <tr>
+                        <td colspan="5" class="dfc-group-header">3. Atividades de Financiamento</td>
+                    </tr>
+                    {% for item in dfc_financiamento %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td data-sort="{{ item.data }}"><code class="text-white">{{ item.data | formata_data }}</code></td>
+                        <td>{{ item.descricao }}</td>
+                        <td><strong>{{ item.participante_nome }}</strong></td>
+                        <td><span class="text-muted small">{{ item.conta_nome }}</span></td>
+                        <td class="text-end fw-bold {% if item.valor >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ item.valor | real }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3" style="font-size: 0.8rem;">Nenhum movimento de financiamento registrado neste período.</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="background: rgba(255, 255, 255, 0.02); font-weight: 700;">
+                        <td colspan="4" class="text-end pe-3" style="font-size: 0.9rem;">Subtotal Atividades de Financiamento:</td>
+                        <td class="text-end {% if total_financiamento >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ total_financiamento | real }}
+                        </td>
+                    </tr>
+
+                    <!-- TOTALIZAÇÃO DO FLUXO LÍQUIDO -->
+                    <tr style="background: rgba(20, 184, 166, 0.08); font-weight: 700; font-size: 0.95rem;">
+                        <td colspan="4" class="text-end pe-3" style="color: var(--accent);">Fluxo Líquido / Saldo do Período (DFC):</td>
+                        <td class="text-end fw-bold {% if saldo_liquido >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-family: monospace; font-size: 0.95rem;">
+                            {{ saldo_liquido | real }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block auth_content %}
+<div class="login-wrapper animate-fade-in" style="max-width: 500px; width: 100%;">
+    <div class="login-card glass" style="padding: 30px;">
+        <!-- Cabeçalho -->
+        <div class="login-header">
+            <div class="logo-container">
+                <h1 class="logo-text">Nova <span class="accent-text">Assinatura</span></h1>
+            </div>
+            <p class="login-subtitle">Flow Empresas - Gestão & BPO Financeiro</p>
+        </div>
+
+        <!-- Alertas de Erro / Flash -->
+        {% if error %}
+        <div class="alert-box alert-error animate-shake" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); color: #ef4444; padding: 15px; border-radius: 8px; display: flex; gap: 12px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.4;">
+            <div class="alert-icon" style="flex-shrink: 0; display: flex; align-items: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <div class="alert-content">
+                <strong>Falha no Cadastro</strong>
+                <p>{{ error }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              {% if category == 'success' %}
+              <div class="alert-box alert-success animate-fade-in" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.25); color: #10b981; padding: 15px; border-radius: 8px; display: flex; gap: 12px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.4;">
+              {% else %}
+              <div class="alert-box alert-error animate-fade-in" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); color: #ef4444; padding: 15px; border-radius: 8px; display: flex; gap: 12px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.4;">
+              {% endif %}
+                <div class="alert-icon" style="flex-shrink: 0; display: flex; align-items: center;">
+                  {% if category == 'success' %}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  {% else %}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  {% endif %}
+                </div>
+                <div class="alert-content">
+                  <strong>{% if category == 'success' %}Sucesso{% else %}Erro{% endif %}</strong>
+                  <p>{{ message }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Formulário de Cadastro -->
+        <form action="{{ url_for('cadastrar_grupo') }}" method="POST" class="login-form">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="nome_grupo" class="form-label">Nome do Grupo Econômico / Empresa</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="nome_grupo" 
+                        name="nome_grupo" 
+                        class="form-input" 
+                        placeholder="ex: Holding XYZ" 
+                        required 
+                        value="{{ request.form.get('nome_grupo', '') }}"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="cnpj" class="form-label">CNPJ Principal da Empresa</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="cnpj" 
+                        name="cnpj" 
+                        class="form-input" 
+                        placeholder="ex: 00.000.000/0001-00" 
+                        required 
+                        value="{{ request.form.get('cnpj', '') }}"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="nome_admin" class="form-label">Nome do Administrador Responsável</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="nome_admin" 
+                        name="nome_admin" 
+                        class="form-input" 
+                        placeholder="ex: Adriano Administrador" 
+                        required 
+                        value="{{ request.form.get('nome_admin', '') }}"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="email" class="form-label">E-mail Corporativo (Acesso Master)</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-input" 
+                        placeholder="ex: admin@empresa.com.br" 
+                        required 
+                        autocomplete="email"
+                        value="{{ request.form.get('email', '') }}"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="password" class="form-label">Senha de Acesso</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="Mínimo 6 caracteres" 
+                        required 
+                        autocomplete="new-password"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="confirm_password" class="form-label">Confirmação de Senha</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        class="form-input" 
+                        placeholder="Confirme sua senha" 
+                        required 
+                        autocomplete="new-password"
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-login" style="margin-bottom: 15px;">
+                <span>Criar Assinatura & Acessar</span>
+                <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 10px;">
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+                Já possui uma assinatura? 
+                <a href="{{ url_for('login') }}" style="color: var(--accent); text-decoration: none; font-weight: 600; transition: var(--transition-smooth);" onmouseover="this.style.color='var(--primary-hover)'" onmouseout="this.style.color='var(--accent)'">Voltar para o Login</a>
+            </p>
+        </div>
+
+        <div class="login-footer" style="margin-top: 20px;">
+            <p>Novo Assinante • Cadastro de Tenant Isolado</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Máscara CNPJ em tempo real
+    document.getElementById("cnpj").addEventListener("input", function(e) {
+        let value = e.target.value.replace(/\D/g, "");
+        if (value.length > 14) {
+            value = value.substring(0, 14);
+        }
+        if (value.length > 12) {
+            value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        } else if (value.length > 8) {
+            value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})$/, "$1.$2.$3/$4");
+        } else if (value.length > 5) {
+            value = value.replace(/^(\d{2})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,3})$/, "$1.$2");
+        }
+        e.target.value = value;
+    });
+</script>
+{% endblock %}

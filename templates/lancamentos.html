@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .csv-dropzone-lc {
+        border: 2px dashed rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(0, 0, 0, 0.2);
+    }
+    .csv-dropzone-lc:hover,
+    .csv-dropzone-lc.drag-over {
+        border-color: var(--primary);
+        background: rgba(37, 99, 235, 0.06);
+    }
+    .csv-dropzone-lc .drop-icon {
+        font-size: 2.5rem;
+        color: var(--primary);
+        margin-bottom: 0.75rem;
+        transition: transform 0.3s ease;
+    }
+    .csv-dropzone-lc:hover .drop-icon {
+        transform: translateY(-3px);
+    }
+    .import-result-card-lc {
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .result-stat-lc {
+        text-align: center;
+        padding: 0.5rem;
+    }
+    .result-stat-lc .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        font-family: 'Rubik', sans-serif;
+        line-height: 1.2;
+    }
+    .result-stat-lc .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        margin-top: 2px;
+    }
+    .lc-spinner { display: none; text-align: center; padding: 2rem 0; }
+    .lc-spinner.active { display: block; }
+    .lc-spinner .spinner-border { width: 2.5rem; height: 2.5rem; border-width: 3px; }
+    .lc-error-table { max-height: 180px; overflow-y: auto; border-radius: 8px; }
+    .lc-error-table::-webkit-scrollbar { width: 4px; }
+    .lc-error-table::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    @keyframes lcSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .lc-slide-up { animation: lcSlideUp 0.4s ease-out forwards; }
+</style>
+
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-pencil-square text-primary fs-4"></i>
+            <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Contabilidade - Lançamentos Contábeis (Diário)</h2>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-info d-flex align-items-center gap-2 px-3 py-2"
+                style="border-radius: 10px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#modalImportarLancamentos">
+            <i class="bi bi-filetype-csv"></i> Importar Lançamentos (CSV)
+        </button>
+    </div>
+
+    <!-- Tabela de Lançamentos -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Partidas Dobradas do Período</h5>
+            <p class="text-muted small mb-0">Listagem de todos os fatos geradores registrados no banco de dados e suas respectivas contas de débito e crédito.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th style="width: 120px;">Data</th>
+                        <th>Histórico / Descrição</th>
+                        <th>Conta Débito (D)</th>
+                        <th>Conta Crédito (C)</th>
+                        <th class="text-end" style="width: 150px;">Valor</th>
+                        <th style="width: 150px;">Centro Custo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lancamentos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td style="font-family: monospace;">{{ l.data | formata_data }}</td>
+                        <td class="fw-bold">{{ l.descricao }}</td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success" style="font-family: monospace;">{{ l.conta_debito }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning-subtle text-warning" style="font-family: monospace;">{{ l.conta_credito }}</span>
+                        </td>
+                        <td class="text-end fw-bold text-white" style="font-family: monospace;">
+                            {{ l.valor | real }}
+                        </td>
+                        <td>
+                            <span class="badge bg-dark text-muted" style="border: 1px solid rgba(255,255,255,0.05);">{{ l.centro_custo or 'Geral' }}</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum lançamento contábil registrado no livro diário.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal de Importação de Lançamentos via CSV                    -->
+<!-- ============================================================ -->
+<div class="modal fade" id="modalImportarLancamentos" tabindex="-1" aria-labelledby="modalImportLancLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content text-white" style="background-color: #0b0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; backdrop-filter: blur(16px); box-shadow: 0 20px 50px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="modalImportLancLabel" style="font-family: 'Rubik', sans-serif;">
+                    <i class="bi bi-journal-arrow-up text-info"></i>
+                    <span>Importar Lançamentos via CSV</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem;"></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px 24px 24px;">
+
+                <!-- Fase 1: Upload -->
+                <div id="lc-upload-phase">
+                    <label for="lc_csv_file" class="csv-dropzone-lc d-block mb-3" id="lc-dropzone-area">
+                        <i class="bi bi-cloud-upload-fill drop-icon d-block"></i>
+                        <span class="d-block text-white fw-bold h6 mb-1">Arraste o CSV de lançamentos ou clique para selecionar</span>
+                        <span class="d-block text-muted small">Arquivo .csv delimitado por <code>;</code> ou <code>,</code></span>
+                        <span id="lc-file-name" class="d-block mt-3 text-success fw-bold" style="display: none; font-size: 0.9rem;"></span>
+                        <input type="file" id="lc_csv_file" class="d-none" accept=".csv">
+                    </label>
+
+                    <!-- Referência de colunas -->
+                    <div class="p-3 mb-3" style="border-radius: 10px; background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.15);">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-info-circle-fill text-info mt-1"></i>
+                            <div>
+                                <span class="text-white small fw-bold d-block mb-1">Colunas esperadas no CSV Histórico:</span>
+                                <span class="text-muted" style="font-size: 0.75rem;">
+                                    <code>Data</code> (obrigatório, DD/MM/AAAA) ·
+                                    <code>Descrição</code> ·
+                                    <code>Valor</code> (obrigatório, formato BR ou US, sinais para receita/despesa) ·
+                                    <code>Categoria</code> (Ex: "4.2.01.013 - Despesas com Pro-Labore") ·
+                                    <code>Conta Bancária</code>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="lc_gerar_partidas_dobradas" checked>
+                        <label class="form-check-label text-white small" for="lc_gerar_partidas_dobradas">
+                            Gerar partidas dobradas no Livro Diário/Razão automaticamente
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-end mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick="baixarCsvExemploLancamentos()" style="border-radius: 8px; font-size: 0.78rem;">
+                            <i class="bi bi-download"></i> Baixar CSV de Exemplo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Fase 2: Spinner -->
+                <div id="lc-processing-phase" class="lc-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processando...</span>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Processando lançamentos contábeis...</p>
+                </div>
+
+                <!-- Fase 3: Resultado -->
+                <div id="lc-result-phase" style="display: none;">
+                    <div id="lc-result-status" class="d-flex align-items-center gap-2 mb-3 p-3" style="border-radius: 10px;"></div>
+
+                    <div class="import-result-card-lc mb-3">
+                        <div class="row g-0">
+                            <div class="col result-stat-lc">
+                                <div class="stat-value text-white" id="lc-stat-lidas">0</div>
+                                <div class="stat-label">Lidas</div>
+                            </div>
+                            <div class="col result-stat-lc">
+                                <div class="stat-value text-success" id="lc-stat-importadas">0</div>
+                                <div class="stat-label">Importadas</div>
+                            </div>
+                            <div class="col result-stat-lc">
+                                <div class="stat-value text-danger" id="lc-stat-erros">0</div>
+                                <div class="stat-label">Erros</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="lc-errors-container" style="display: none;">
+                        <h6 class="text-muted small fw-bold mb-2">
+                            <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                            Detalhes dos Erros
+                        </h6>
+                        <div class="lc-error-table">
+                            <table class="table table-sm table-hover align-middle text-white m-0" style="font-size: 0.8rem;">
+                                <thead>
+                                    <tr class="text-muted">
+                                        <th style="width: 70px;">Linha</th>
+                                        <th>Descrição do Erro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lc-errors-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0" style="padding: 10px 24px 24px 24px;">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal" id="lc-btn-cancelar" style="border-radius: 10px; font-weight: 500;">Cancelar</button>
+                <button type="button" class="btn btn-info px-4 d-flex align-items-center gap-2" id="lc-btn-processar" onclick="processarImportacaoLancamentos()" disabled style="border-radius: 10px; font-weight: 600;">
+                    <i class="bi bi-upload"></i>
+                    <span>Processar Importação</span>
+                </button>
+                <button type="button" class="btn btn-primary px-4 d-flex align-items-center gap-2" id="lc-btn-fechar" onclick="fecharModalLancRecarregar()" style="border-radius: 10px; font-weight: 600; display: none;">
+                    <i class="bi bi-check-lg"></i>
+                    <span>Fechar e Atualizar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// -------------------------------------------------------
+// Importação CSV de Lançamentos — Lógica completa
+// -------------------------------------------------------
+const lcFileInput = document.getElementById('lc_csv_file');
+const lcDropzone = document.getElementById('lc-dropzone-area');
+const lcFileName = document.getElementById('lc-file-name');
+const lcBtnProcessar = document.getElementById('lc-btn-processar');
+
+lcFileInput.addEventListener('change', function() {
+    if (this.files && this.files.length > 0) {
+        lcFileName.textContent = '📄 ' + this.files[0].name;
+        lcFileName.style.display = 'block';
+        lcBtnProcessar.disabled = false;
+    } else {
+        lcFileName.style.display = 'none';
+        lcBtnProcessar.disabled = true;
+    }
+});
+
+lcDropzone.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); this.classList.add('drag-over'); });
+lcDropzone.addEventListener('dragleave', function(e) { e.preventDefault(); e.stopPropagation(); this.classList.remove('drag-over'); });
+lcDropzone.addEventListener('drop', function(e) {
+    e.preventDefault(); e.stopPropagation(); this.classList.remove('drag-over');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.name.toLowerCase().endsWith('.csv')) {
+            lcFileInput.files = e.dataTransfer.files;
+            lcFileName.textContent = '📄 ' + file.name;
+            lcFileName.style.display = 'block';
+            lcBtnProcessar.disabled = false;
+        } else { alert('Por favor, selecione um arquivo .csv'); }
+    }
+});
+
+document.getElementById('modalImportarLancamentos').addEventListener('hidden.bs.modal', function() { resetarModalLancamentos(); });
+
+function resetarModalLancamentos() {
+    lcFileInput.value = '';
+    lcFileName.style.display = 'none';
+    lcFileName.textContent = '';
+    lcBtnProcessar.disabled = true;
+    document.getElementById('lc-upload-phase').style.display = 'block';
+    document.getElementById('lc-processing-phase').classList.remove('active');
+    document.getElementById('lc-result-phase').style.display = 'none';
+    document.getElementById('lc-btn-cancelar').style.display = '';
+    lcBtnProcessar.style.display = '';
+    document.getElementById('lc-btn-fechar').style.display = 'none';
+}
+
+function processarImportacaoLancamentos() {
+    const fileInput = document.getElementById('lc_csv_file');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Por favor, selecione um arquivo CSV.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', fileInput.files[0]);
+    formData.append('gerar_partidas_dobradas', document.getElementById('lc_gerar_partidas_dobradas').checked);
+
+    // UI Transition to Spinner
+    document.getElementById('lc-upload-phase').style.display = 'none';
+    document.getElementById('lc-processing-phase').style.display = 'block';
+    lcBtnProcessar.style.display = 'none';
+    document.getElementById('lc-btn-cancelar').style.display = 'none';
+
+    fetch("{{ url_for('importar_lancamentos_csv') }}", { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => { exibirResultadoLancamentos(data); })
+    .catch(error => {
+        exibirResultadoLancamentos({
+            sucesso: false, mensagem: 'Erro de comunicação com o servidor.',
+            total_lidas: 0, total_importadas: 0, total_erros: 1,
+            erros: [{linha: 0, erro: error.message}]
+        });
+    });
+}
+
+function exibirResultadoLancamentos(data) {
+    document.getElementById('lc-processing-phase').classList.remove('active');
+    const resultPhase = document.getElementById('lc-result-phase');
+    resultPhase.style.display = 'block';
+    resultPhase.classList.add('lc-slide-up');
+
+    const statusDiv = document.getElementById('lc-result-status');
+    if (data.sucesso) {
+        statusDiv.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i><span class="text-white fw-bold">' + data.mensagem + '</span>';
+        statusDiv.style.background = 'rgba(20, 83, 45, 0.25)';
+        statusDiv.style.border = '1px solid rgba(34, 197, 94, 0.2)';
+    } else {
+        statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i><span class="text-white fw-bold">' + data.mensagem + '</span>';
+        statusDiv.style.background = 'rgba(153, 27, 27, 0.25)';
+        statusDiv.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+    }
+
+    document.getElementById('lc-stat-lidas').textContent = data.total_lidas || 0;
+    document.getElementById('lc-stat-importadas').textContent = data.total_importadas || 0;
+    document.getElementById('lc-stat-erros').textContent = data.total_erros || 0;
+
+    const errorsContainer = document.getElementById('lc-errors-container');
+    const errorsTbody = document.getElementById('lc-errors-tbody');
+    errorsTbody.innerHTML = '';
+    if (data.erros && data.erros.length > 0) {
+        errorsContainer.style.display = 'block';
+        data.erros.forEach(err => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            tr.innerHTML = '<td><span class="badge bg-dark-subtle text-muted border border-secondary font-monospace" style="font-size:0.7rem;">' +
+                (err.linha || '—') + '</span></td><td class="text-muted">' + err.erro + '</td>';
+            errorsTbody.appendChild(tr);
+        });
+    } else { errorsContainer.style.display = 'none'; }
+
+    document.getElementById('lc-btn-fechar').style.display = '';
+}
+
+function fecharModalLancRecarregar() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarLancamentos'));
+    if (modal) modal.hide();
+    setTimeout(() => { window.location.reload(); }, 300);
+}
+
+function baixarCsvExemploLancamentos() {
+    const csvContent = [
+        'data;descricao;conta_codigo;valor;tipo;centro_custo;participante_cnpj;conta_contrapartida',
+        '2025-01-15;Venda de Serviços BPO;3.1.1;15000,00;Receita;Geral;;1.1.1',
+        '2025-01-20;Pagamento Folha;4.2.1;-8500,00;Despesa;RH;;',
+        '2025-01-25;Licenças ERP Repassadas;4.1.2;3200,50;Despesa;Geral;12.345.678/0001-90;2.1.1',
+        '2025-02-01;Aluguel Comercial;4.2.1;2800,00;Despesa;Administrativo;;'
+    ].join('\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'lancamentos_exemplo.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}
+
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-pencil-square text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Contabilidade - Lançamentos Contábeis (Diário)</h2>
+    </div>
+
+    <!-- Tabela de Lançamentos -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Partidas Dobradas do Período</h5>
+            <p class="text-muted small mb-0">Listagem de todos os fatos geradores registrados no banco de dados e suas respectivas contas de débito e crédito.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th style="width: 120px;">Data</th>
+                        <th>Histórico / Descrição</th>
+                        <th>Conta Débito (D)</th>
+                        <th>Conta Crédito (C)</th>
+                        <th class="text-end" style="width: 150px;">Valor</th>
+                        <th style="width: 150px;">Centro Custo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lancamentos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td style="font-family: monospace;">{{ l.data | formata_data }}</td>
+                        <td class="fw-bold">{{ l.descricao }}</td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success" style="font-family: monospace;">{{ l.conta_debito }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning-subtle text-warning" style="font-family: monospace;">{{ l.conta_credito }}</span>
+                        </td>
+                        <td class="text-end fw-bold text-white" style="font-family: monospace;">
+                            {{ l.valor | real }}
+                        </td>
+                        <td>
+                            <span class="badge bg-dark text-muted" style="border: 1px solid rgba(255,255,255,0.05);">{{ l.centro_custo or 'Geral' }}</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum lançamento contábil registrado no livro diário.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho de Página Limpo -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-wallet2 text-primary fs-4"></i>
+            <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Configurações - Contas Correntes Bancárias</h2>
+        </div>
+        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalAtualizarBancos" style="border-radius: 10px;">
+            <i class="bi bi-arrow-repeat me-1"></i> Atualizar Tabela de Bancos (Febraban)
+        </button>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Grid de Conteúdo Responsiva -->
+    <div class="row g-4">
+        <!-- Lado Esquerdo (.col-lg-8): Tabela com contas correntes existentes -->
+        <div class="col-lg-8">
+            <div class="card dv-card p-4 h-100">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Contas Correntes Bancárias</h5>
+                    <p class="text-muted small mb-0">Contas bancárias do grupo e seu respectivo mapeamento contábil no Ativo Disponível</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                        <thead>
+                            <tr class="text-muted small" style="border-bottom-width: 2px;">
+                                <th>Conta Corrente</th>
+                                <th>Status/Tipo</th>
+                                <th>CNPJ Titular</th>
+                                <th>Conta Contábil Mapeada</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in contas %}
+                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); {% if not c.get('ativo', True) %}opacity: 0.6;{% endif %}">
+                                <td>
+                                    <strong class="text-white"><i class="bi bi-bank me-2 text-primary"></i><span class="badge bg-secondary me-1">{{ c.banco_codigo }}</span> {{ c.banco_nome }}</strong><br>
+                                    <code class="text-white bg-dark px-2 py-1 rounded mt-1 d-inline-block" style="font-size: 0.85rem; font-family: monospace;">Agência: {{ c.agencia }} | C/C: {{ c.conta_numero }}-{{ c.conta_dv }}</code>
+                                    <div class="mt-1">
+                                        <span class="badge bg-info text-dark border border-info" title="Apelido CSV"><i class="bi bi-filetype-csv me-1"></i>{{ c.apelido_conta }}</span>
+                                        {% if c.id_origem_ofx %}
+                                        <span class="badge bg-light text-dark border border-light ms-1" title="ID Origem OFX"><i class="bi bi-filetype-xml me-1"></i>{{ c.id_origem_ofx }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if c.banco_ispb %}<small class="text-muted d-block mt-1">ISPB: {{ c.banco_ispb }}</small>{% endif %}
+                                </td>
+                                <td>
+                                    {% if c.get('ativo', True) %}
+                                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">Ativa</span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50">Inativa</span>
+                                    {% endif %}<br>
+                                    <small class="text-muted">{{ c.get('tipo_conta', 'Corrente') }}</small>
+                                </td>
+                                <td>{{ c.cnpj }}</td>
+                                <td>
+                                    <span class="badge bg-secondary" style="font-family: monospace; font-size: 0.75rem;">{{ c.conta_contabil_codigo }}</span><br>
+                                    <span class="text-muted small">{{ c.conta_contabil_nome }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#editModal{{ c._id }}" title="Editar Conta">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- Modal de Edição para esta conta -->
+                            <div class="modal fade" id="editModal{{ c._id }}" tabindex="-1" aria-labelledby="editModalLabel{{ c._id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content dv-card">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title text-white" id="editModalLabel{{ c._id }}"><i class="bi bi-pencil-square me-2 text-primary"></i>Editar Conta Corrente</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form action="{{ url_for('config_contas_correntes_atualizar') }}" method="POST">
+                                            <input type="hidden" name="conta_id" value="{{ c._id }}">
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <!-- Busca Banco Modal -->
+                                                    <div class="col-md-12 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Buscar Instituição Bancária</label>
+                                                        <input type="text" list="lista-bancos" class="form-control banco-search" placeholder="Digite o nome ou código COMPE (ex: 001)..." autocomplete="off" style="border-radius: 10px;">
+                                                    </div>
+                                                    
+                                                    <!-- Campos Ocultos e Readonly -->
+                                                    <input type="hidden" name="banco_ispb" class="banco-ispb" value="{{ c.banco_ispb or '' }}">
+                                                    
+                                                    <div class="col-md-3 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Código COMPE</label>
+                                                        <input type="text" name="banco_codigo" class="form-control banco-codigo" value="{{ c.banco_codigo or '' }}" required readonly style="border-radius: 10px; background-color: var(--surface-bg);">
+                                                    </div>
+                                                    <div class="col-md-9 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Nome do Banco</label>
+                                                        <input type="text" name="banco_nome" class="form-control banco-nome" value="{{ c.banco_nome or '' }}" required readonly style="border-radius: 10px; background-color: var(--surface-bg);">
+                                                    </div>
+
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Agência</label>
+                                                        <input type="text" name="agencia" class="form-control" value="{{ c.agencia }}" required style="border-radius: 10px;">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Conta Número</label>
+                                                        <input type="text" name="conta_numero" class="form-control" value="{{ c.conta_numero }}" required style="border-radius: 10px;">
+                                                    </div>
+                                                    <div class="col-md-2 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">DV</label>
+                                                        <input type="text" name="conta_dv" class="form-control" value="{{ c.conta_dv }}" required style="border-radius: 10px;">
+                                                    </div>
+                                                    
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Tipo de Conta</label>
+                                                        <select name="tipo_conta" class="form-select" style="border-radius: 10px;">
+                                                            <option value="Corrente" {% if c.get('tipo_conta') == 'Corrente' %}selected{% endif %}>Conta Corrente</option>
+                                                            <option value="Poupança" {% if c.get('tipo_conta') == 'Poupança' %}selected{% endif %}>Poupança</option>
+                                                            <option value="Aplicação" {% if c.get('tipo_conta') == 'Aplicação' %}selected{% endif %}>Conta Aplicação/Investimento</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3 d-flex align-items-center">
+                                                        <div class="form-check form-switch mt-4">
+                                                            <input class="form-check-input" type="checkbox" name="ativo" id="ativoCheck{{ c._id }}" {% if c.get('ativo', True) %}checked{% endif %}>
+                                                            <label class="form-check-label text-white" for="ativoCheck{{ c._id }}">Conta Ativa</label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Apelido (CSV)</label>
+                                                        <input type="text" name="apelido_conta" class="form-control" value="{{ c.apelido_conta }}" required style="border-radius: 10px;">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">CNPJ Titular</label>
+                                                        <input type="text" name="cnpj" class="form-control" value="{{ c.cnpj }}" required style="border-radius: 10px;">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">ID Origem (OFX)</label>
+                                                        <input type="text" name="id_origem_ofx" class="form-control" value="{{ c.id_origem_ofx or '' }}" style="border-radius: 10px;">
+                                                    </div>
+                                                    <div class="col-md-12 mb-3">
+                                                        <label class="form-label small fw-bold text-muted">Conta Contábil do Ativo (Banco)</label>
+                                                        <select name="conta_contabil_codigo" class="form-select" required style="border-radius: 10px;">
+                                                            {% for cc in contas_contabeis %}
+                                                            <option value="{{ cc.codigo }}" {% if c.conta_contabil_codigo == cc.codigo %}selected{% endif %}>{{ cc.codigo }} - {{ cc.nome }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-secondary">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Nenhuma conta corrente bancária cadastrada. Crie uma ao lado para iniciar a conciliação OFX/CSV vinculada.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lado Direito (.col-lg-4): Formulário para nova conta corrente -->
+        <div class="col-lg-4">
+            <div class="card dv-card p-4">
+                <div class="border-bottom border-secondary pb-2 mb-3">
+                    <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Nova Conta Corrente</h5>
+                    <p class="text-muted small mb-0">Cadastre a conta corrente e ligue-a ao Plano de Contas</p>
+                </div>
+
+                <form action="{{ url_for('config_contas_correntes') }}" method="POST">
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label small fw-bold text-muted">Buscar Instituição Bancária</label>
+                        <input type="text" list="lista-bancos" class="form-control banco-search" placeholder="Digite nome ou código (ex: 341)..." autocomplete="off" style="border-radius: 10px;">
+                    </div>
+                    
+                    <input type="hidden" name="banco_ispb" class="banco-ispb">
+                    
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group mb-3">
+                                <label class="form-label small fw-bold text-muted">COMPE</label>
+                                <input type="text" name="banco_codigo" class="form-control banco-codigo" required readonly style="border-radius: 10px; background-color: var(--surface-bg);">
+                            </div>
+                        </div>
+                        <div class="col-8">
+                            <div class="form-group mb-3">
+                                <label class="form-label small fw-bold text-muted">Nome do Banco</label>
+                                <input type="text" name="banco_nome" class="form-control banco-nome" required readonly style="border-radius: 10px; background-color: var(--surface-bg);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="agencia" class="form-label small fw-bold text-muted">Agência Bancária</label>
+                        <input type="text" id="agencia" name="agencia" class="form-control" placeholder="ex: 1234" required style="border-radius: 10px; font-family: monospace;">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="form-group mb-3">
+                                <label for="conta_numero" class="form-label small fw-bold text-muted">Número da Conta</label>
+                                <input type="text" id="conta_numero" name="conta_numero" class="form-control" placeholder="ex: 123456" required style="border-radius: 10px; font-family: monospace;">
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-group mb-3">
+                                <label for="conta_dv" class="form-label small fw-bold text-muted">DV</label>
+                                <input type="text" id="conta_dv" name="conta_dv" class="form-control" placeholder="ex: 7" required style="border-radius: 10px; font-family: monospace;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="form-group mb-3">
+                                <label class="form-label small fw-bold text-muted">Tipo de Conta</label>
+                                <select name="tipo_conta" class="form-select" style="border-radius: 10px;">
+                                    <option value="Corrente">Conta Corrente</option>
+                                    <option value="Poupança">Poupança</option>
+                                    <option value="Aplicação">Conta Aplicação/Investimento</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-4 d-flex align-items-center">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="ativo" id="ativoCheckNovo" checked>
+                                <label class="form-check-label text-white" for="ativoCheckNovo">Ativa</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="apelido_conta" class="form-label small fw-bold text-muted">Apelido (Identificador CSV)</label>
+                        <input type="text" id="apelido_conta" name="apelido_conta" class="form-control" placeholder="ex: BB Corrente" required style="border-radius: 10px;">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="cnpj" class="form-label small fw-bold text-muted">CNPJ Titular</label>
+                        <input type="text" id="cnpj" name="cnpj" class="form-control" placeholder="ex: 12.345.678/0001-90" required style="border-radius: 10px;">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="id_origem_ofx" class="form-label small fw-bold text-muted">ID Origem (OFX) <span class="fw-normal text-secondary">(Opcional)</span></label>
+                        <input type="text" id="id_origem_ofx" name="id_origem_ofx" class="form-control" placeholder="ex: 0011234567" style="border-radius: 10px; font-family: monospace;">
+                        <span class="text-muted d-block mt-1" style="font-size: 0.75rem;">Deixe vazio se não souber. O sistema pode mapear futuramente.</span>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="conta_contabil_codigo" class="form-label small fw-bold text-muted">Conta Contábil do Ativo (Banco)</label>
+                        <select id="conta_contabil_codigo" name="conta_contabil_codigo" class="form-select" required style="border-radius: 10px;">
+                            <option value="">Selecione a conta analítica...</option>
+                            {% for cc in contas_contabeis %}
+                            <option value="{{ cc.codigo }}">{{ cc.codigo }} - {{ cc.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="text-muted d-block mt-1" style="font-size: 0.75rem;">Apenas contas analíticas de equivalentes de caixa / banco do grupo 1.1.1 ou 1.1.01.</span>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="reset" class="btn btn-outline-secondary px-4" style="border-radius: 10px; font-weight: 600;">Limpar</button>
+                        <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px; font-weight: 600;">Cadastrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Atualizar Bancos -->
+    <div class="modal fade" id="modalAtualizarBancos" tabindex="-1" aria-labelledby="modalAtualizarBancosLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content dv-card">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white" id="modalAtualizarBancosLabel"><i class="bi bi-bank me-2 text-primary"></i>Sincronizar Bancos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Mantenha a lista de instituições financeiras do STR/Febraban atualizada.</p>
+                    
+                    <!-- Form 1: Upload CSV -->
+                    <form id="formImportarBancos" enctype="multipart/form-data" class="mb-4">
+                        <label class="form-label small fw-bold text-muted">Opção 1: Upload de Arquivo ParticipantesSTR.csv</label>
+                        <div class="input-group">
+                            <input type="file" class="form-control" name="arquivo_csv" accept=".csv" required style="border-radius: 10px 0 0 10px; background-color: var(--surface-bg); color: white;">
+                            <button class="btn btn-primary" type="submit" style="border-radius: 0 10px 10px 0;">Enviar e Processar</button>
+                        </div>
+                    </form>
+                    
+                    <hr class="border-secondary">
+                    
+                    <!-- Form 2: Sync Automatico -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Opção 2: Sincronização Direta</label>
+                        <p class="small text-muted mb-2">Tenta recarregar do arquivo local do servidor ou da BrasilAPI caso não exista.</p>
+                        <button type="button" id="btnSincronizarBancos" class="btn btn-outline-info w-100" style="border-radius: 10px;">
+                            <i class="bi bi-cloud-download me-2"></i>Sincronizar Arquivo Local / API
+                        </button>
+                    </div>
+
+                    <!-- Area de Status -->
+                    <div id="statusBancosSync" class="d-none mt-3">
+                        <div class="alert alert-info py-2" style="border-radius: 10px;">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span class="small" id="statusBancosSyncText">Processando, por favor aguarde...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="resultBancosSync" class="d-none mt-3">
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-white mb-2" id="resultBancosTitle">Resultado</h6>
+                                <p class="card-text small text-muted mb-0" id="resultBancosMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Datalist Base para Autocomplete -->
+    <datalist id="lista-bancos"></datalist>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let bancosCache = [];
+    
+    // Function to load banks
+    function carregarBancos() {
+        fetch("{{ url_for('api_bancos') }}")
+            .then(response => response.json())
+            .then(data => {
+                bancosCache = data;
+                const datalist = document.getElementById('lista-bancos');
+                datalist.innerHTML = '';
+                data.forEach(banco => {
+                    const option = document.createElement('option');
+                    option.value = `${banco.code} - ${banco.name}`;
+                    option.dataset.code = banco.code;
+                    option.dataset.name = banco.name;
+                    option.dataset.ispb = banco.ispb;
+                    datalist.appendChild(option);
+                });
+            })
+            .catch(err => console.error("Erro ao carregar bancos da API:", err));
+    }
+    
+    carregarBancos();
+
+    // Formulario de Upload
+    const formImportar = document.getElementById('formImportarBancos');
+    if(formImportar) {
+        formImportar.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const statusDiv = document.getElementById('statusBancosSync');
+            const resultDiv = document.getElementById('resultBancosSync');
+            const statusText = document.getElementById('statusBancosSyncText');
+            
+            statusDiv.classList.remove('d-none');
+            resultDiv.classList.add('d-none');
+            statusText.textContent = "Lendo e processando arquivo CSV...";
+            
+            fetch("{{ url_for('config_bancos_importar_csv') }}", {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                statusDiv.classList.add('d-none');
+                resultDiv.classList.remove('d-none');
+                
+                if(data.sucesso) {
+                    document.getElementById('resultBancosTitle').innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>Sucesso`;
+                    document.getElementById('resultBancosMessage').innerHTML = `${data.total_processados} bancos processados | <span class="text-success">${data.inseridos} novos</span> | <span class="text-info">${data.atualizados} atualizados</span><br><small class="d-block mt-2">${data.mensagem}</small>`;
+                    carregarBancos();
+                } else {
+                    document.getElementById('resultBancosTitle').innerHTML = `<i class="bi bi-x-circle-fill text-danger me-2"></i>Erro`;
+                    document.getElementById('resultBancosMessage').textContent = data.mensagem;
+                }
+            })
+            .catch(err => {
+                statusDiv.classList.add('d-none');
+                resultDiv.classList.remove('d-none');
+                document.getElementById('resultBancosTitle').innerHTML = `<i class="bi bi-x-circle-fill text-danger me-2"></i>Erro Interno`;
+                document.getElementById('resultBancosMessage').textContent = err.message;
+            });
+        });
+    }
+
+    // Botao de Sync
+    const btnSync = document.getElementById('btnSincronizarBancos');
+    if(btnSync) {
+        btnSync.addEventListener('click', function() {
+            const statusDiv = document.getElementById('statusBancosSync');
+            const resultDiv = document.getElementById('resultBancosSync');
+            const statusText = document.getElementById('statusBancosSyncText');
+            
+            statusDiv.classList.remove('d-none');
+            resultDiv.classList.add('d-none');
+            statusText.textContent = "Sincronizando bancos automaticamente...";
+            
+            fetch("{{ url_for('config_bancos_sincronizar') }}", {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                statusDiv.classList.add('d-none');
+                resultDiv.classList.remove('d-none');
+                
+                if(data.sucesso) {
+                    document.getElementById('resultBancosTitle').innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>Sucesso`;
+                    document.getElementById('resultBancosMessage').innerHTML = `${data.total_processados} bancos processados | <span class="text-success">${data.inseridos} novos</span> | <span class="text-info">${data.atualizados} atualizados</span><br><small class="d-block mt-2">${data.mensagem}</small>`;
+                    carregarBancos();
+                } else {
+                    document.getElementById('resultBancosTitle').innerHTML = `<i class="bi bi-x-circle-fill text-danger me-2"></i>Erro`;
+                    document.getElementById('resultBancosMessage').textContent = data.mensagem;
+                }
+            })
+            .catch(err => {
+                statusDiv.classList.add('d-none');
+                resultDiv.classList.remove('d-none');
+                document.getElementById('resultBancosTitle').innerHTML = `<i class="bi bi-x-circle-fill text-danger me-2"></i>Erro Interno`;
+                document.getElementById('resultBancosMessage').textContent = err.message;
+            });
+        });
+    }
+
+    // Handles the input change event for all banco-search inputs (in create form and edit modals)
+    const searchInputs = document.querySelectorAll('.banco-search');
+    searchInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const val = this.value;
+            const container = this.closest('form');
+            
+            // Find matched option
+            const datalist = document.getElementById('lista-bancos');
+            let matchedOption = null;
+            for(let option of datalist.options) {
+                if(option.value === val) {
+                    matchedOption = option;
+                    break;
+                }
+            }
+            
+            const codigoInput = container.querySelector('.banco-codigo');
+            const nomeInput = container.querySelector('.banco-nome');
+            const ispbInput = container.querySelector('.banco-ispb');
+            
+            if(matchedOption) {
+                codigoInput.value = matchedOption.dataset.code;
+                nomeInput.value = matchedOption.dataset.name;
+                ispbInput.value = matchedOption.dataset.ispb;
+            } else {
+                // Se digitou livremente algo que não existe, limpa pra forçar validação
+                codigoInput.value = "";
+                nomeInput.value = "";
+                ispbInput.value = "";
+                this.value = "";
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

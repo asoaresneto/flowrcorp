@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- 1. Cabeçalho de Página Limpo & Sub-Navegação -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-range-fill text-primary fs-4"></i>
+            <div>
+                <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">DRE - Evolução Anual Comparativa</h2>
+                <span class="text-muted small">Exercício Selecionado: <strong>{{ ano }}</strong></span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('financeiro_dre') }}" class="btn btn-sm btn-outline-secondary px-3" style="border-radius: 8px; font-weight: 600;">DRE Mensal</a>
+            <a href="{{ url_for('financeiro_dre_anual') }}" class="btn btn-sm btn-primary active px-3" style="border-radius: 8px; font-weight: 600;">DRE Anual</a>
+            <a href="{{ url_for('financeiro_dfc') }}" class="btn btn-sm btn-outline-secondary px-3" style="border-radius: 8px; font-weight: 600;">DFC (Fluxo Caixa)</a>
+        </div>
+    </div>
+
+    <!-- Exibição de Mensagens Flashed -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{% if category == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show mb-4" role="alert" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>{{ 'Sucesso!' if category == 'success' else 'Atenção!' }}</strong> {{ msg }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 2. Barra de Filtros Globais no Topo -->
+    <div class="card dv-card p-4 mb-4">
+        <form method="GET" action="{{ url_for('financeiro_dre_anual') }}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="ano" class="form-label small fw-bold text-muted mb-2">Exercício (Ano)</label>
+                <input type="number" id="ano" name="ano" class="form-control" value="{{ ano }}" min="2000" max="2100" onchange="this.form.submit()" style="border-radius: 10px;">
+            </div>
+            
+            <div class="col-md-5">
+                <label for="cnpj" class="form-label small fw-bold text-muted mb-2">Filtrar por CNPJ</label>
+                <select id="cnpj" name="cnpj" class="form-select" onchange="this.form.submit()" style="border-radius: 10px;">
+                    <option value="">Todos os CNPJs</option>
+                    {% for p in participantes_cnpj %}
+                    <option value="{{ p.cnpj_cpf }}" {% if cnpj_filtro == p.cnpj_cpf %}selected{% endif %}>
+                        {{ p.nome_razao }} ({{ p.cnpj_cpf }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="centro_custo" class="form-label small fw-bold text-muted mb-2">Centro de Custo</label>
+                <select id="centro_custo" name="centro_custo" class="form-select" onchange="this.form.submit()" style="border-radius: 10px;">
+                    <option value="Geral">Todos os Centros</option>
+                    {% for cc in centros_custo %}
+                    <option value="{{ cc }}" {% if centro_custo_filtro == cc %}selected{% endif %}>
+                        {{ cc }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-1">
+                <a href="{{ url_for('financeiro_dre_anual', ano=ano) }}" class="btn btn-outline-secondary w-100" style="border-radius: 10px;" title="Limpar Filtros"><i class="bi bi-x-circle"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- 3. Tabela do DRE Anual -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Matriz de Resultados - Jan a Dez vs Acumulado</h5>
+            <p class="text-muted small mb-0">Evolução mensal comparativa das contas com movimento. Valores em Reais (R$). Linhas zeradas ocultadas.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08); font-size: 0.8rem;">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th>Conta</th>
+                        <th>Descrição da Conta</th>
+                        <th class="text-end">Jan</th>
+                        <th class="text-end">Fev</th>
+                        <th class="text-end">Mar</th>
+                        <th class="text-end">Abr</th>
+                        <th class="text-end">Mai</th>
+                        <th class="text-end">Jun</th>
+                        <th class="text-end">Jul</th>
+                        <th class="text-end">Ago</th>
+                        <th class="text-end">Set</th>
+                        <th class="text-end">Out</th>
+                        <th class="text-end">Nov</th>
+                        <th class="text-end">Dez</th>
+                        <th class="text-end" style="background: rgba(99, 102, 241, 0.08); font-weight: 700;">Acumulado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contas %}
+                    <tr class="{% if c.nivel <= 2 %}dre-row-sintetica{% else %}dre-row-analitica{% endif %}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td style="font-family: monospace;">
+                            {{ c.codigo }}
+                        </td>
+                        <td class="indent-{{ c.nivel }}" style="white-space: nowrap;">
+                            {{ c.nome }}
+                        </td>
+                        {% for m_bal in c.mensal %}
+                        <td class="text-end {% if m_bal > 0 %}text-success{% elif m_bal < 0 %}text-danger{% endif %}" style="font-family: monospace;">
+                            {{ m_bal | num_br if m_bal != 0 else "-" }}
+                        </td>
+                        {% endfor %}
+                        <td class="text-end fw-bold {% if c.acumulado > 0 %}text-success{% elif c.acumulado < 0 %}text-danger{% endif %}" style="font-family: monospace; background: rgba(99, 102, 241, 0.04);">
+                            {{ c.acumulado | num_br if c.acumulado != 0 else "-" }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="15" class="text-center text-muted py-4">Nenhuma conta com movimento acumulado ativo neste exercício.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-content container-fluid p-0 animate-fade-in">
+    <!-- Cabeçalho -->
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-gear-wide-connected text-primary fs-4"></i>
+        <h2 class="h4 text-white mb-0" style="font-family: 'Rubik', sans-serif;">Gestão Master de Assinaturas SaaS</h2>
+    </div>
+
+    <!-- Grid de KPIs de Bilhetagem -->
+    <div class="row g-3 mb-4">
+        <!-- KPI 1: MRR Total -->
+        <div class="col-md-4">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Faturamento Mensal (MRR)</span>
+                    <i class="bi bi-cash-stack text-success fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-success">{{ total_mrr | real }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Soma das Mensalidades Ativas</div>
+            </div>
+        </div>
+
+        <!-- KPI 2: Grupos Ativos -->
+        <div class="col-md-4">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Grupos Ativos</span>
+                    <i class="bi bi-check-circle-fill text-primary fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-primary">{{ ativos_count }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Acesso Liberado no Sistema</div>
+            </div>
+        </div>
+
+        <!-- KPI 3: Grupos Suspensos -->
+        <div class="col-md-4">
+            <div class="card dv-kpi p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-bold">Grupos Suspensos</span>
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                </div>
+                <div class="dv-kpi-value text-warning">{{ suspensos_count }}</div>
+                <div class="text-muted small mt-1" style="font-size: 0.7rem;">Bloqueados por Inadimplência</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela Geral de Controle de Assinaturas -->
+    <div class="card dv-card p-4">
+        <div class="border-bottom border-secondary pb-2 mb-3">
+            <h5 class="card-title fw-bold text-white mb-1" style="font-family: 'Rubik', sans-serif;">Gestão Comercial de Inquilinos (Tenants)</h5>
+            <p class="text-muted small mb-0">Controle de limites em tempo real, status comercial e operação BPO.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 text-white" style="border-color: rgba(255, 255, 255, 0.08);">
+                <thead>
+                    <tr class="text-muted small" style="border-bottom-width: 2px;">
+                        <th>Grupo Econômico</th>
+                        <th>Banco / Slug</th>
+                        <th class="text-center">CNPJs Usados</th>
+                        <th class="text-center">Usuários Usados</th>
+                        <th class="text-end">Mensalidade</th>
+                        <th class="text-center">Dia Venc.</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Modalidade BPO</th>
+                        <th class="text-end" style="width: 150px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in grupos %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td class="fw-bold"><i class="bi bi-box-fill me-2 text-primary"></i>{{ g.nome_grupo }}</td>
+                        <td><span style="font-family: monospace;" class="text-muted">{{ g.db_name }}</span></td>
+                        
+                        <!-- CNPJs Limite -->
+                        <td class="text-center">
+                            <span class="badge {% if g.cnpjs_utilizados > g.max_cnpjs %}bg-danger{% else %}bg-dark text-muted{% endif %}" style="border: 1px solid rgba(255,255,255,0.05);">
+                                {{ g.cnpjs_utilizados }} / {{ g.max_cnpjs }}
+                            </span>
+                        </td>
+                        
+                        <!-- Usuários Limite -->
+                        <td class="text-center">
+                            <span class="badge {% if g.usuarios_utilizados > g.max_usuarios %}bg-danger{% else %}bg-dark text-muted{% endif %}" style="border: 1px solid rgba(255,255,255,0.05);">
+                                {{ g.usuarios_utilizados }} / {{ g.max_usuarios }}
+                            </span>
+                        </td>
+                        
+                        <!-- Mensalidade -->
+                        <td class="text-end fw-bold text-success" style="font-family: monospace;">
+                            {{ g.valor_mensalidade | real }}
+                        </td>
+                        
+                        <!-- Dia Vencimento -->
+                        <td class="text-center text-muted" style="font-family: monospace;" data-sort="{{ g.data_vencimento }}">{{ (g.data_vencimento | formata_data) or '-' }}</td>
+                        
+                        <!-- Status -->
+                        <td class="text-center">
+                            {% if g.status == 'Ativo' %}
+                            <span class="badge bg-success text-white" style="font-size: 0.75rem; padding: 4px 8px;">
+                                Ativo
+                            </span>
+                            {% elif g.status == 'Suspenso' %}
+                            <span class="badge bg-warning text-dark" style="font-size: 0.75rem; padding: 4px 8px;">
+                                Suspenso
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger text-white" style="font-size: 0.75rem; padding: 4px 8px;">
+                                {{ g.status }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Tag BPO -->
+                        <td class="text-center">
+                            {% if g.flag_bpo %}
+                            <span class="badge bg-primary-subtle text-primary" style="font-size: 0.75rem;"><i class="bi bi-shield-shaded me-1"></i>[BPO]</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-muted" style="font-size: 0.75rem;">Tradicional</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Ações -->
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1" onclick="abrirModalGerenciarAssinatura('{{ g.id }}', '{{ g.nome_grupo }}', '{{ g.max_cnpjs }}', '{{ g.max_usuarios }}', '{{ g.valor_mensalidade | num_br }}', '{{ g.data_vencimento | formata_data }}', '{{ g.status }}', {{ 'true' if g.flag_bpo else 'false' }})" style="border-radius: 8px; font-weight: 600;">
+                                <i class="bi bi-gear-fill"></i> Gerenciar Assinatura
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">Nenhum grupo econômico cadastrado no sistema master.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bootstrap: Gerenciar Assinatura -->
+<div class="modal fade" id="modalGerenciarAssinatura" tabindex="-1" aria-labelledby="modalGerenciarAssinaturaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white" style="background-color: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold" id="modalGerenciarAssinaturaLabel" style="font-family: 'Rubik', sans-serif;">
+                    <i class="bi bi-sliders text-warning me-2"></i>Gerenciar Assinatura & Limites
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('gestao_master_grupo_atualizar') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" id="edit_grupo_id" name="grupo_id">
+                    
+                    <div class="form-group mb-3">
+                        <label for="edit_nome_grupo" class="form-label small fw-bold text-muted">Grupo Econômico</label>
+                        <input type="text" id="edit_nome_grupo" name="nome_grupo" class="form-control text-white" readonly disabled style="border-radius: 10px; background: rgba(255, 255, 255, 0.05); border-color: rgba(255,255,255,0.15);">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="edit_status" class="form-label small fw-bold text-muted">Status / Acesso Comercial</label>
+                        <select id="edit_status" name="status" class="form-select text-white" required style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            <option value="Ativo" style="background-color: var(--bg-card); color: var(--text-main);">Liberar Acesso (Ativo)</option>
+                            <option value="Suspenso" style="background-color: var(--bg-card); color: var(--text-main);">Bloquear por Inadimplência (Suspenso)</option>
+                            <option value="Cancelado" style="background-color: var(--bg-card); color: var(--text-main);">Cancelar Assinatura (Cancelado)</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_max_cnpjs" class="form-label small fw-bold text-muted">Limite de CNPJs</label>
+                                <input type="number" id="edit_max_cnpjs" name="max_cnpjs" class="form-control text-white" required min="1" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_max_usuarios" class="form-label small fw-bold text-muted">Limite de Usuários</label>
+                                <input type="number" id="edit_max_usuarios" name="max_usuarios" class="form-control text-white" required min="1" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_valor_mensalidade" class="form-label small fw-bold text-muted">Valor Mensalidade (R$)</label>
+                                <input type="text" id="edit_valor_mensalidade" name="valor_mensalidade" class="form-control mask-money text-white" required placeholder="0,00" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_data_vencimento" class="form-label small fw-bold text-muted">Dia de Vencimento</label>
+                                <input type="text" id="edit_data_vencimento" name="data_vencimento" class="form-control text-white" placeholder="ex: 10" style="border-radius: 10px; background: rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.15);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2 mt-3">
+                        <input class="form-check-input" type="checkbox" id="edit_flag_bpo" name="flag_bpo" value="true">
+                        <label class="form-check-label small fw-bold text-muted ms-2" for="edit_flag_bpo" style="cursor: pointer;">Ativar Modalidade BPO Financeiro</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 600;">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark" style="border-radius: 10px; font-weight: 600;">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalGerenciarAssinatura(id, nome, maxCnpjs, maxUsuarios, valor, vencimento, status, bpo) {
+    document.getElementById("edit_grupo_id").value = id;
+    document.getElementById("edit_nome_grupo").value = nome;
+    document.getElementById("edit_status").value = status;
+    document.getElementById("edit_max_cnpjs").value = maxCnpjs;
+    document.getElementById("edit_max_usuarios").value = maxUsuarios;
+    document.getElementById("edit_valor_mensalidade").value = valor;
+    document.getElementById("edit_data_vencimento").value = vencimento;
+    document.getElementById("edit_flag_bpo").checked = bpo;
+    
+    const myModal = new bootstrap.Modal(document.getElementById('modalGerenciarAssinatura'));
+    myModal.show();
+}
+</script>
+{% endblock %}
